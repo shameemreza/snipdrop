@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<ruleset name="SnipDrop">
+	<description>PHPCS ruleset for SnipDrop plugin.</description>
+
+	<!-- Use WordPress coding standards -->
+	<rule ref="WordPress"/>
+
+	<!-- Only scan PHP files -->
+	<arg name="extensions" value="php"/>
+
+	<!-- Ignore vendor and node_modules -->
+	<exclude-pattern>*/vendor/*</exclude-pattern>
+	<exclude-pattern>*/node_modules/*</exclude-pattern>
+
+	<!-- Main plugin file exceptions -->
+	<rule ref="WordPress.Files.FileName.InvalidClassFileName">
+		<exclude-pattern>snipdrop.php</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.Files.FileName.NotHyphenatedLowercase">
+		<exclude-pattern>snipdrop.php</exclude-pattern>
+	</rule>
+
+	<!-- Allow function + class in main plugin file (standard WordPress pattern) -->
+	<rule ref="Universal.Files.SeparateFunctionsFromOO">
+		<exclude-pattern>snipdrop.php</exclude-pattern>
+	</rule>
+</ruleset>

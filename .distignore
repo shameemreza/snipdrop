@@ -1,0 +1,52 @@
+# Distribution ignore file
+# Files/folders listed here are excluded when building the plugin for distribution
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Development files
+.distignore
+composer.json
+composer.lock
+phpcs.xml
+phpstan.neon
+phpstan-bootstrap.php
+
+# Documentation (dev only)
+PRD.md
+COMPETITIVE-ANALYSIS.md
+tasks.md
+CHANGELOG.md
+
+# Dependencies (dev only)
+/vendor/
+/node_modules/
+
+# IDE
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Testing
+/tests/
+phpunit.xml
+phpunit.xml.dist
+.phpunit.result.cache
+
+# Build tools
+Gruntfile.js
+Gulpfile.js
+package.json
+package-lock.json
+webpack.config.js
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Misc
+*.zip
+*.tar.gz

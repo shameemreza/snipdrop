@@ -1,0 +1,60 @@
+# Dependencies
+/vendor/
+/node_modules/
+
+# Build artifacts
+/build/
+/dist/
+
+# IDE and editors
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+.project
+.settings/
+PRD.md
+COMPETITIVE-ANALYSIS.md
+tasks.md
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+
+# Logs
+*.log
+/logs/
+
+# Testing
+/tests/coverage/
+.phpunit.result.cache
+phpunit.xml
+
+# Local config
+.env
+.env.local
+*.local.php
+
+# Composer
+composer.lock
+
+# npm/yarn
+package-lock.json
+yarn.lock
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Archives
+*.zip
+*.tar.gz
+*.rar

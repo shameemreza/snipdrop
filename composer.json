@@ -1,0 +1,22 @@
+{
+    "name": "shameemreza/snipdrop",
+    "description": "Curated code snippets for WordPress and WooCommerce.",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "require": {
+        "php": ">=7.4"
+    },
+    "require-dev": {
+        "php-stubs/wordpress-stubs": "^6.0",
+        "phpstan/phpstan": "^1.0",
+        "szepeviktor/phpstan-wordpress": "^1.0"
+    },
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        }
+    },
+    "scripts": {
+        "phpstan": "phpstan analyse --level=2"
+    }
+}
