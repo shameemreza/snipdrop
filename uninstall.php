@@ -30,7 +30,8 @@ function sndp_uninstall_cleanup() {
 		// User did not opt to delete data, only remove transients.
 		delete_transient( 'sndp_manifest' );
 		delete_transient( 'sndp_activated' );
-		delete_transient( 'sndp_snippet_error_notice' );
+		delete_transient( 'sndp_error_notice' );
+		delete_transient( 'sndp_new_snippet_count' );
 
 		// Delete all snippet transients.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Uninstall cleanup, bulk delete of transients.
@@ -51,6 +52,8 @@ function sndp_uninstall_cleanup() {
 		'sndp_local_snippets',
 		'sndp_custom_snippets',
 		'sndp_snippet_configs',
+		'sndp_error_history',
+		'sndp_snippet_revisions',
 	);
 
 	foreach ( $options as $option ) {

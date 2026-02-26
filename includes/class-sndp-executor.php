@@ -63,6 +63,13 @@ class SNDP_Executor {
 	private $custom_snippets;
 
 	/**
+	 * Cached active custom snippets for the current request.
+	 *
+	 * @var array|null
+	 */
+	private $active_custom_snippets_cache = null;
+
+	/**
 	 * Get instance.
 	 *
 	 * @since 1.0.0
@@ -118,16 +125,22 @@ class SNDP_Executor {
 	/**
 	 * Execute all enabled library snippets.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	private function execute_library_snippets() {
-		// Get enabled snippets.
 		$enabled = $this->snippets->get_enabled_snippets();
 		if ( empty( $enabled ) ) {
 			return;
 		}
 
-		// Get error snippets to skip.
+		/**
+		 * Filter the list of enabled library snippet IDs before execution.
+		 *
+		 * @since 1.0.0
+		 * @param array $enabled Array of enabled snippet IDs.
+		 */
+		$enabled = apply_filters( 'snipdrop_enabled_snippets', $enabled );
+
 		$error_snippets = $this->snippets->get_error_snippets();
 
 		foreach ( $enabled as $snippet_id ) {
@@ -143,7 +156,7 @@ class SNDP_Executor {
 	/**
 	 * Execute all active custom snippets.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	private function execute_custom_snippets() {
 		$active_snippets = $this->custom_snippets->get_active();
@@ -210,7 +223,7 @@ class SNDP_Executor {
 	/**
 	 * Execute a single custom snippet.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 * @param string $snippet_id Snippet ID.
 	 * @param array  $snippet    Snippet data.
 	 * @return bool True on success, false on failure.
@@ -238,7 +251,7 @@ class SNDP_Executor {
 	/**
 	 * Check if custom snippet should run based on conditions (for hook-based execution).
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 * @param array $snippet Snippet data.
 	 * @return bool
 	 */
@@ -291,7 +304,7 @@ class SNDP_Executor {
 	/**
 	 * Check if an auto-insert snippet should run.
 	 *
-	 * @since 1.2.0
+	 * @since 1.0.0
 	 * @param array $snippet Snippet data.
 	 * @return bool
 	 */
@@ -322,7 +335,7 @@ class SNDP_Executor {
 	/**
 	 * Execute snippets in site header (wp_head).
 	 *
-	 * @since 1.2.0
+	 * @since 1.0.0
 	 */
 	public function execute_header_snippets() {
 		$this->execute_auto_insert_snippets( 'site_header' );
@@ -331,7 +344,7 @@ class SNDP_Executor {
 	/**
 	 * Execute snippets in site footer (wp_footer).
 	 *
-	 * @since 1.2.0
+	 * @since 1.0.0
 	 */
 	public function execute_footer_snippets() {
 		$this->execute_auto_insert_snippets( 'site_footer' );
@@ -340,7 +353,7 @@ class SNDP_Executor {
 	/**
 	 * Execute snippets before/after content.
 	 *
-	 * @since 1.2.0
+	 * @since 1.0.0
 	 * @param string $content The post content.
 	 * @return string Modified content.
 	 */
@@ -359,7 +372,7 @@ class SNDP_Executor {
 	/**
 	 * Execute auto-insert snippets for a location.
 	 *
-	 * @since 1.2.0
+	 * @since 1.0.0
 	 * @param string $location Location to execute.
 	 */
 	private function execute_auto_insert_snippets( $location ) {
@@ -370,12 +383,15 @@ class SNDP_Executor {
 	/**
 	 * Get output from auto-insert snippets.
 	 *
-	 * @since 1.2.0
+	 * @since 1.0.0
 	 * @param string $location Location to get output for.
 	 * @return string Combined output.
 	 */
 	private function get_auto_insert_output( $location ) {
-		$active_snippets = $this->custom_snippets->get_active();
+		if ( null === $this->active_custom_snippets_cache ) {
+			$this->active_custom_snippets_cache = $this->custom_snippets->get_active();
+		}
+		$active_snippets = $this->active_custom_snippets_cache;
 		$output          = '';
 
 		foreach ( $active_snippets as $snippet_id => $snippet ) {
@@ -425,7 +441,7 @@ class SNDP_Executor {
 	 *
 	 * Supports both echo-style output and return statements.
 	 *
-	 * @since 1.2.0
+	 * @since 1.0.0
 	 * @param string $snippet_id Snippet ID.
 	 * @param string $code       PHP code.
 	 * @return string Captured output.
@@ -441,11 +457,29 @@ class SNDP_Executor {
 			// phpcs:ignore Generic.PHP.ForbiddenFunctions.Found, Squiz.PHP.Eval.Discouraged -- eval() is required for dynamic snippet execution.
 			$return_value = eval( $code );
 		} catch ( \ParseError $e ) {
-			$this->custom_snippets->record_error( $snippet_id, array( 'message' => $e->getMessage(), 'line' => $e->getLine() ) );
+			$this->custom_snippets->record_error(
+				$snippet_id,
+				array(
+					'message' => $e->getMessage(),
+					'line'    => $e->getLine(),
+				)
+			);
 		} catch ( \Error $e ) {
-			$this->custom_snippets->record_error( $snippet_id, array( 'message' => $e->getMessage(), 'line' => $e->getLine() ) );
+			$this->custom_snippets->record_error(
+				$snippet_id,
+				array(
+					'message' => $e->getMessage(),
+					'line'    => $e->getLine(),
+				)
+			);
 		} catch ( \Exception $e ) {
-			$this->custom_snippets->record_error( $snippet_id, array( 'message' => $e->getMessage(), 'line' => $e->getLine() ) );
+			$this->custom_snippets->record_error(
+				$snippet_id,
+				array(
+					'message' => $e->getMessage(),
+					'line'    => $e->getLine(),
+				)
+			);
 		}
 
 		$output = ob_get_clean();
@@ -464,7 +498,7 @@ class SNDP_Executor {
 	/**
 	 * Render shortcode.
 	 *
-	 * @since 1.2.0
+	 * @since 1.0.0
 	 * @param array $atts Shortcode attributes.
 	 * @return string Shortcode output.
 	 */
@@ -527,7 +561,7 @@ class SNDP_Executor {
 	/**
 	 * Check user condition (logged in/out).
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 * @param array $snippet Snippet data.
 	 * @return bool
 	 */
@@ -550,7 +584,7 @@ class SNDP_Executor {
 	/**
 	 * Check post type condition.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 * @param array $snippet Snippet data.
 	 * @return bool
 	 */
@@ -575,7 +609,7 @@ class SNDP_Executor {
 	/**
 	 * Check specific page ID condition.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 * @param array $snippet Snippet data.
 	 * @return bool
 	 */
@@ -607,7 +641,7 @@ class SNDP_Executor {
 	/**
 	 * Replace placeholders in code with user configuration values.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 * @param string $code              The snippet code.
 	 * @param string $snippet_id        Snippet ID.
 	 * @param array  $settings_definition Settings definition from snippet.
@@ -623,11 +657,11 @@ class SNDP_Executor {
 		// Merge user config with defaults.
 		$config = wp_parse_args( $user_config, $defaults );
 
-		// Replace each placeholder.
+		// Replace each placeholder with escaped values to prevent code injection.
 		foreach ( $config as $key => $value ) {
-			// Support both {{key}} and {key} placeholders.
-			$code = str_replace( '{{' . $key . '}}', $value, $code );
-			$code = str_replace( '{' . $key . '}', $value, $code );
+			$safe_value = addslashes( (string) $value );
+			$code       = str_replace( '{{' . $key . '}}', $safe_value, $code );
+			$code       = str_replace( '{' . $key . '}', $safe_value, $code );
 		}
 
 		return $code;
@@ -643,16 +677,43 @@ class SNDP_Executor {
 	 * @return bool
 	 */
 	private function run_code( $code, $snippet_id, $snippet_type = 'library' ) {
-		// The code should already include the hook registration.
-		// We just need to eval it.
+		/**
+		 * Filter whether a snippet should be executed.
+		 *
+		 * @since 1.0.0
+		 * @param bool   $allow        Whether to allow execution. Default true.
+		 * @param string $snippet_id   The snippet ID.
+		 * @param string $snippet_type The snippet type ('library' or 'custom').
+		 */
+		if ( ! apply_filters( 'snipdrop_allow_execute', true, $snippet_id, $snippet_type ) ) {
+			return false;
+		}
+
 		try {
-			// Remove opening PHP tag if present.
 			$code = preg_replace( '/^<\?php\s*/', '', $code );
 			$code = preg_replace( '/\?>\s*$/', '', $code );
 
-			// Execute the code.
+			/**
+			 * Filter snippet code before execution.
+			 *
+			 * @since 1.0.0
+			 * @param string $code         The PHP code to execute.
+			 * @param string $snippet_id   The snippet ID.
+			 * @param string $snippet_type The snippet type ('library' or 'custom').
+			 */
+			$code = apply_filters( 'snipdrop_before_execute', $code, $snippet_id, $snippet_type );
+
 			// phpcs:ignore Generic.PHP.ForbiddenFunctions.Found, Squiz.PHP.Eval.Discouraged -- eval() is required for dynamic snippet execution. All code is sanitized and user-controlled.
 			eval( $code );
+
+			/**
+			 * Action after a snippet has been successfully executed.
+			 *
+			 * @since 1.0.0
+			 * @param string $snippet_id   The snippet ID.
+			 * @param string $snippet_type The snippet type ('library' or 'custom').
+			 */
+			do_action( 'snipdrop_after_execute', $snippet_id, $snippet_type );
 
 			return true;
 		} catch ( \ParseError $e ) {
@@ -670,7 +731,7 @@ class SNDP_Executor {
 	/**
 	 * Record error for snippet.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 * @param string     $snippet_id   Snippet ID.
 	 * @param string     $snippet_type Snippet type (library or custom).
 	 * @param \Throwable $exception    Exception or Error object.

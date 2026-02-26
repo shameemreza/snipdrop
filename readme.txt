@@ -3,7 +3,7 @@ Contributors: shameemreza
 Tags: code snippets, woocommerce, php snippets, functions, customization
 Requires at least: 6.0
 Tested up to: 6.9
-Stable tag: 1.1.0
+Stable tag: 1.0.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -126,20 +126,22 @@ Yes. SnipDrop works with WP Super Cache, W3 Total Cache, LiteSpeed Cache, WP Roc
 
 == Changelog ==
 
-= 1.1.0 =
-* Added configurable snippets with custom settings.
-* Added My Snippets for custom code management.
-* Added code editor for creating PHP, JS, CSS, and HTML snippets.
-* Added Copy to My Snippets feature for library items.
-* Improved error handling for custom snippets.
-
 = 1.0.0 =
 * Initial release.
-* Curated snippet library with categories.
-* One-click enable and disable.
+* Curated snippet library with categories and search.
+* One-click enable and disable for each snippet.
+* Configurable snippets with custom settings (no code editing needed).
+* My Snippets for custom PHP, JS, CSS, and HTML code management.
+* Full code editor with syntax highlighting.
+* Copy library snippets to My Snippets for customization.
+* Auto-insert locations: header, footer, before/after content, frontend, admin.
+* Shortcode support for custom snippets.
+* Conditional execution by user state, post type, and page ID.
 * Automatic error detection and snippet disabling.
 * Safe mode with recovery URL.
 * GitHub-based library sync.
+* Suspicious code pattern detection.
+* File-based error logging with error history.
 
 == Third-Party Services ==
 

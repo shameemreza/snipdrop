@@ -188,7 +188,7 @@ class SNDP_Snippets {
 			'line'    => isset( $error['line'] ) ? absint( $error['line'] ) : 0,
 		);
 
-		update_option( 'sndp_snippet_errors', $errors );
+		update_option( 'sndp_snippet_errors', $errors, false );
 
 		// Auto-disable the snippet.
 		$this->disable_snippet( $snippet_id );
@@ -205,7 +205,7 @@ class SNDP_Snippets {
 
 		if ( isset( $errors[ $snippet_id ] ) ) {
 			unset( $errors[ $snippet_id ] );
-			update_option( 'sndp_snippet_errors', $errors );
+			update_option( 'sndp_snippet_errors', $errors, false );
 		}
 	}
 
@@ -281,7 +281,7 @@ class SNDP_Snippets {
 	/**
 	 * Get snippet configuration values.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 * @param string $snippet_id Snippet ID.
 	 * @return array Configuration values.
 	 */
@@ -293,7 +293,7 @@ class SNDP_Snippets {
 	/**
 	 * Save snippet configuration values.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 * @param string $snippet_id Snippet ID.
 	 * @param array  $config     Configuration values.
 	 * @return bool
@@ -307,7 +307,7 @@ class SNDP_Snippets {
 	/**
 	 * Delete snippet configuration.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 * @param string $snippet_id Snippet ID.
 	 * @return bool
 	 */
@@ -325,7 +325,7 @@ class SNDP_Snippets {
 	/**
 	 * Check if snippet has saved configuration.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 * @param string $snippet_id Snippet ID.
 	 * @return bool
 	 */
@@ -337,7 +337,7 @@ class SNDP_Snippets {
 	/**
 	 * Get configuration value with fallback to default.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 * @param string $snippet_id    Snippet ID.
 	 * @param string $key           Setting key.
 	 * @param mixed  $default_value Default value.
@@ -351,7 +351,7 @@ class SNDP_Snippets {
 	/**
 	 * Sanitize configuration values.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 * @param array $config Configuration values.
 	 * @return array
 	 */
@@ -377,7 +377,7 @@ class SNDP_Snippets {
 	/**
 	 * Get default configuration from snippet settings definition.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 * @param array $settings_definition Snippet settings array.
 	 * @return array Default values keyed by setting ID.
 	 */

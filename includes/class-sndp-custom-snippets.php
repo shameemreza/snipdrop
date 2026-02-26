@@ -3,7 +3,7 @@
  * Custom snippets manager class.
  *
  * @package SnipDrop
- * @since   1.1.0
+ * @since   1.0.0
  */
 
 // Exit if accessed directly.
@@ -16,7 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * Manages user-created custom code snippets.
  *
- * @since 1.1.0
+ * @since 1.0.0
  */
 class SNDP_Custom_Snippets {
 
@@ -35,9 +35,23 @@ class SNDP_Custom_Snippets {
 	private $option_name = 'sndp_custom_snippets';
 
 	/**
+	 * Option name for storing snippet revisions.
+	 *
+	 * @var string
+	 */
+	private $revisions_option = 'sndp_snippet_revisions';
+
+	/**
+	 * Maximum revisions to keep per snippet.
+	 *
+	 * @var int
+	 */
+	private $max_revisions = 5;
+
+	/**
 	 * Get instance.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 * @return SNDP_Custom_Snippets
 	 */
 	public static function instance() {
@@ -50,7 +64,7 @@ class SNDP_Custom_Snippets {
 	/**
 	 * Constructor.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	private function __construct() {
 		// Private constructor.
@@ -59,7 +73,7 @@ class SNDP_Custom_Snippets {
 	/**
 	 * Get all custom snippets.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 * @return array
 	 */
 	public function get_all() {
@@ -69,7 +83,7 @@ class SNDP_Custom_Snippets {
 	/**
 	 * Get a single custom snippet.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 * @param string $snippet_id Snippet ID.
 	 * @return array|null
 	 */
@@ -81,7 +95,7 @@ class SNDP_Custom_Snippets {
 	/**
 	 * Save a custom snippet.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 * @param array $snippet_data Snippet data.
 	 * @return string Snippet ID.
 	 */
@@ -148,6 +162,11 @@ class SNDP_Custom_Snippets {
 			'updated_by'  => get_current_user_id(),
 		);
 
+		// Store revision of previous code if editing an existing snippet.
+		if ( $existing && isset( $existing['code'] ) && $existing['code'] !== $snippet['code'] ) {
+			$this->store_revision( $snippet_id, $existing['code'], $existing['code_type'] ?? 'php' );
+		}
+
 		$snippets[ $snippet_id ] = $snippet;
 		update_option( $this->option_name, $snippets, false );
 
@@ -157,7 +176,7 @@ class SNDP_Custom_Snippets {
 	/**
 	 * Delete a custom snippet.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 * @param string $snippet_id Snippet ID.
 	 * @return bool
 	 */
@@ -177,7 +196,7 @@ class SNDP_Custom_Snippets {
 	/**
 	 * Toggle snippet status.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 * @param string $snippet_id Snippet ID.
 	 * @return bool|string New status or false on failure.
 	 */
@@ -200,7 +219,7 @@ class SNDP_Custom_Snippets {
 	/**
 	 * Activate a snippet.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 * @param string $snippet_id Snippet ID.
 	 * @return bool
 	 */
@@ -222,7 +241,7 @@ class SNDP_Custom_Snippets {
 	/**
 	 * Deactivate a snippet.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 * @param string $snippet_id Snippet ID.
 	 * @return bool
 	 */
@@ -244,7 +263,7 @@ class SNDP_Custom_Snippets {
 	/**
 	 * Get all active custom snippets.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 * @return array
 	 */
 	public function get_active() {
@@ -260,7 +279,7 @@ class SNDP_Custom_Snippets {
 	/**
 	 * Duplicate a snippet.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 * @param string $snippet_id Snippet ID.
 	 * @return string|false New snippet ID or false on failure.
 	 */
@@ -282,7 +301,7 @@ class SNDP_Custom_Snippets {
 	/**
 	 * Create custom snippet from library snippet.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 * @param array $library_snippet Library snippet data.
 	 * @return string New custom snippet ID.
 	 */
@@ -304,7 +323,7 @@ class SNDP_Custom_Snippets {
 	/**
 	 * Record error for a custom snippet.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 * @param string $snippet_id Snippet ID.
 	 * @param array  $error      Error details.
 	 */
@@ -331,7 +350,7 @@ class SNDP_Custom_Snippets {
 	/**
 	 * Clear error for a snippet.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 * @param string $snippet_id Snippet ID.
 	 */
 	public function clear_error( $snippet_id ) {
@@ -348,7 +367,7 @@ class SNDP_Custom_Snippets {
 	/**
 	 * Validate PHP code syntax.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 * @param string $code PHP code to validate.
 	 * @return true|string True if valid, error message if not.
 	 */
@@ -373,7 +392,7 @@ class SNDP_Custom_Snippets {
 	/**
 	 * Check code for suspicious/dangerous patterns.
 	 *
-	 * @since 1.2.0
+	 * @since 1.0.0
 	 * @param string $code    Code to check.
 	 * @param string $type    Code type (php, js, css, html).
 	 * @return array Array of warnings (empty if safe).
@@ -393,7 +412,7 @@ class SNDP_Custom_Snippets {
 	/**
 	 * Check PHP code for suspicious patterns.
 	 *
-	 * @since 1.2.0
+	 * @since 1.0.0
 	 * @param string $code PHP code.
 	 * @return array Warnings.
 	 */
@@ -470,7 +489,7 @@ class SNDP_Custom_Snippets {
 	/**
 	 * Check JavaScript code for suspicious patterns.
 	 *
-	 * @since 1.2.0
+	 * @since 1.0.0
 	 * @param string $code JavaScript code.
 	 * @return array Warnings.
 	 */
@@ -501,9 +520,339 @@ class SNDP_Custom_Snippets {
 	}
 
 	/**
+	 * Store a revision of snippet code.
+	 *
+	 * @since 1.0.0
+	 * @param string $snippet_id Snippet ID.
+	 * @param string $code       Previous code.
+	 * @param string $code_type  Code type.
+	 */
+	private function store_revision( $snippet_id, $code, $code_type ) {
+		$all_revisions = get_option( $this->revisions_option, array() );
+		if ( ! isset( $all_revisions[ $snippet_id ] ) ) {
+			$all_revisions[ $snippet_id ] = array();
+		}
+
+		array_unshift(
+			$all_revisions[ $snippet_id ],
+			array(
+				'code'      => $code,
+				'code_type' => $code_type,
+				'date'      => current_time( 'mysql' ),
+				'user'      => get_current_user_id(),
+			)
+		);
+
+		$all_revisions[ $snippet_id ] = array_slice( $all_revisions[ $snippet_id ], 0, $this->max_revisions );
+
+		update_option( $this->revisions_option, $all_revisions, false );
+	}
+
+	/**
+	 * Get revisions for a snippet.
+	 *
+	 * @since 1.0.0
+	 * @param string $snippet_id Snippet ID.
+	 * @return array Array of revisions.
+	 */
+	public function get_revisions( $snippet_id ) {
+		$all_revisions = get_option( $this->revisions_option, array() );
+		return isset( $all_revisions[ $snippet_id ] ) ? $all_revisions[ $snippet_id ] : array();
+	}
+
+	/**
+	 * Restore a snippet to a specific revision.
+	 *
+	 * @since 1.0.0
+	 * @param string $snippet_id    Snippet ID.
+	 * @param int    $revision_index Zero-based revision index.
+	 * @return bool True on success, false on failure.
+	 */
+	public function restore_revision( $snippet_id, $revision_index ) {
+		$revisions = $this->get_revisions( $snippet_id );
+
+		if ( ! isset( $revisions[ $revision_index ] ) ) {
+			return false;
+		}
+
+		$snippet = $this->get( $snippet_id );
+		if ( ! $snippet ) {
+			return false;
+		}
+
+		$snippet['code']      = $revisions[ $revision_index ]['code'];
+		$snippet['code_type'] = $revisions[ $revision_index ]['code_type'];
+
+		return (bool) $this->save( $snippet );
+	}
+
+	/**
+	 * Export custom snippets as a structured array.
+	 *
+	 * @since 1.0.0
+	 * @param array $snippet_ids Optional. Specific snippet IDs to export. Empty exports all.
+	 * @return array Export data with metadata and snippets.
+	 */
+	public function export( $snippet_ids = array() ) {
+		$snippets = $this->get_all();
+
+		if ( ! empty( $snippet_ids ) ) {
+			$snippets = array_intersect_key( $snippets, array_flip( $snippet_ids ) );
+		}
+
+		$export_snippets = array();
+		foreach ( $snippets as $snippet_id => $snippet ) {
+			$export_snippets[] = array(
+				'title'       => $snippet['title'],
+				'description' => $snippet['description'] ?? '',
+				'code'        => $snippet['code'] ?? '',
+				'code_type'   => $snippet['code_type'] ?? 'php',
+				'status'      => $snippet['status'] ?? 'inactive',
+				'location'    => $snippet['location'] ?? 'everywhere',
+				'hook'        => $snippet['hook'] ?? 'init',
+				'priority'    => $snippet['priority'] ?? 10,
+				'user_cond'   => $snippet['user_cond'] ?? 'all',
+				'post_types'  => $snippet['post_types'] ?? array(),
+				'page_ids'    => $snippet['page_ids'] ?? '',
+			);
+		}
+
+		return array(
+			'plugin'   => 'snipdrop',
+			'version'  => SNDP_VERSION,
+			'exported' => gmdate( 'c' ),
+			'count'    => count( $export_snippets ),
+			'snippets' => $export_snippets,
+		);
+	}
+
+	/**
+	 * Import snippets from structured data.
+	 *
+	 * Supports SnipDrop, WPCode, and Code Snippets export formats.
+	 *
+	 * @since 1.0.0
+	 * @param array $data Parsed JSON data.
+	 * @return array|WP_Error Import result with count, or error.
+	 */
+	public function import( $data ) {
+		if ( ! is_array( $data ) ) {
+			return new \WP_Error( 'invalid_data', __( 'Invalid import data.', 'snipdrop' ) );
+		}
+
+		$snippets_to_import = $this->normalize_import_data( $data );
+
+		if ( is_wp_error( $snippets_to_import ) ) {
+			return $snippets_to_import;
+		}
+
+		if ( empty( $snippets_to_import ) ) {
+			return new \WP_Error( 'no_snippets', __( 'No snippets found in the import file.', 'snipdrop' ) );
+		}
+
+		$imported = 0;
+		$skipped  = 0;
+
+		foreach ( $snippets_to_import as $snippet_data ) {
+			$snippet_data['id']     = '';
+			$snippet_data['status'] = 'inactive';
+
+			$snippet_id = $this->save( $snippet_data );
+			if ( $snippet_id ) {
+				++$imported;
+			} else {
+				++$skipped;
+			}
+		}
+
+		return array(
+			'imported' => $imported,
+			'skipped'  => $skipped,
+		);
+	}
+
+	/**
+	 * Normalize import data from various plugin formats.
+	 *
+	 * @since 1.0.0
+	 * @param array $data Raw import data.
+	 * @return array|WP_Error Normalized snippet array.
+	 */
+	private function normalize_import_data( $data ) {
+		// SnipDrop native format.
+		if ( isset( $data['plugin'] ) && 'snipdrop' === $data['plugin'] && isset( $data['snippets'] ) ) {
+			return $this->normalize_snipdrop_format( $data['snippets'] );
+		}
+
+		// WPCode format: array of objects with 'code', 'code_type', 'title'.
+		if ( isset( $data[0]['code'] ) && isset( $data[0]['code_type'] ) && isset( $data[0]['title'] ) ) {
+			return $this->normalize_wpcode_format( $data );
+		}
+
+		// Code Snippets format: has 'snippets' key with objects containing 'name', 'code', 'scope'.
+		if ( isset( $data['snippets'] ) && isset( $data['snippets'][0]['name'] ) && isset( $data['snippets'][0]['scope'] ) ) {
+			return $this->normalize_code_snippets_format( $data['snippets'] );
+		}
+
+		// Single array of snippets without wrapper (generic).
+		if ( isset( $data['snippets'] ) && is_array( $data['snippets'] ) ) {
+			return $this->normalize_snipdrop_format( $data['snippets'] );
+		}
+
+		return new \WP_Error( 'unknown_format', __( 'Unrecognized import file format. Supported: SnipDrop, WPCode, Code Snippets.', 'snipdrop' ) );
+	}
+
+	/**
+	 * Normalize SnipDrop native export format.
+	 *
+	 * @since 1.0.0
+	 * @param array $snippets Raw snippet array.
+	 * @return array Normalized snippets.
+	 */
+	private function normalize_snipdrop_format( $snippets ) {
+		$normalized = array();
+
+		foreach ( $snippets as $snippet ) {
+			if ( empty( $snippet['code'] ) && empty( $snippet['title'] ) ) {
+				continue;
+			}
+
+			$normalized[] = array(
+				'title'       => $snippet['title'] ?? __( 'Imported Snippet', 'snipdrop' ),
+				'description' => $snippet['description'] ?? '',
+				'code'        => $snippet['code'] ?? '',
+				'code_type'   => $snippet['code_type'] ?? 'php',
+				'location'    => $snippet['location'] ?? 'everywhere',
+				'hook'        => $snippet['hook'] ?? 'init',
+				'priority'    => $snippet['priority'] ?? 10,
+				'user_cond'   => $snippet['user_cond'] ?? 'all',
+				'post_types'  => $snippet['post_types'] ?? array(),
+				'page_ids'    => $snippet['page_ids'] ?? '',
+				'source'      => 'import',
+			);
+		}
+
+		return $normalized;
+	}
+
+	/**
+	 * Normalize WPCode export format.
+	 *
+	 * @since 1.0.0
+	 * @param array $snippets WPCode snippet array.
+	 * @return array Normalized snippets.
+	 */
+	private function normalize_wpcode_format( $snippets ) {
+		$normalized = array();
+
+		$type_map = array(
+			'php'  => 'php',
+			'html' => 'html',
+			'css'  => 'css',
+			'js'   => 'js',
+			'text' => 'html',
+		);
+
+		$location_map = array(
+			'site_wide_header' => 'site_header',
+			'site_wide_footer' => 'site_footer',
+			'before_content'   => 'before_content',
+			'after_content'    => 'after_content',
+			'frontend_only'    => 'frontend',
+			'admin_only'       => 'admin',
+			'everywhere'       => 'everywhere',
+		);
+
+		foreach ( $snippets as $snippet ) {
+			if ( empty( $snippet['code'] ) ) {
+				continue;
+			}
+
+			$code_type = isset( $snippet['code_type'], $type_map[ $snippet['code_type'] ] )
+				? $type_map[ $snippet['code_type'] ]
+				: 'php';
+
+			$location = 'everywhere';
+			if ( isset( $snippet['location'] ) ) {
+				$loc_key  = is_string( $snippet['location'] ) ? $snippet['location'] : '';
+				$location = isset( $location_map[ $loc_key ] ) ? $location_map[ $loc_key ] : 'everywhere';
+			}
+
+			$normalized[] = array(
+				'title'       => $snippet['title'] ?? __( 'Imported from WPCode', 'snipdrop' ),
+				'description' => $snippet['note'] ?? '',
+				'code'        => $snippet['code'],
+				'code_type'   => $code_type,
+				'location'    => $location,
+				'hook'        => 'init',
+				'priority'    => $snippet['priority'] ?? 10,
+				'user_cond'   => 'all',
+				'post_types'  => array(),
+				'page_ids'    => '',
+				'source'      => 'import:wpcode',
+			);
+		}
+
+		return $normalized;
+	}
+
+	/**
+	 * Normalize Code Snippets plugin export format.
+	 *
+	 * @since 1.0.0
+	 * @param array $snippets Code Snippets array.
+	 * @return array Normalized snippets.
+	 */
+	private function normalize_code_snippets_format( $snippets ) {
+		$normalized = array();
+
+		$scope_map = array(
+			'global'         => 'everywhere',
+			'front-end'      => 'frontend',
+			'admin'          => 'admin',
+			'single-use'     => 'everywhere',
+			'head-content'   => 'site_header',
+			'footer-content' => 'site_footer',
+			'content'        => 'before_content',
+		);
+
+		foreach ( $snippets as $snippet ) {
+			if ( empty( $snippet['code'] ) ) {
+				continue;
+			}
+
+			$scope    = isset( $snippet['scope'] ) ? $snippet['scope'] : 'global';
+			$location = isset( $scope_map[ $scope ] ) ? $scope_map[ $scope ] : 'everywhere';
+
+			$code_type = 'php';
+			if ( isset( $snippet['type'] ) ) {
+				$code_type = in_array( $snippet['type'], array( 'php', 'html', 'css', 'js' ), true )
+					? $snippet['type']
+					: 'php';
+			}
+
+			$normalized[] = array(
+				'title'       => $snippet['name'] ?? __( 'Imported from Code Snippets', 'snipdrop' ),
+				'description' => $snippet['desc'] ?? '',
+				'code'        => $snippet['code'],
+				'code_type'   => $code_type,
+				'location'    => $location,
+				'hook'        => 'init',
+				'priority'    => $snippet['priority'] ?? 10,
+				'user_cond'   => 'all',
+				'post_types'  => array(),
+				'page_ids'    => '',
+				'source'      => 'import:code-snippets',
+			);
+		}
+
+		return $normalized;
+	}
+
+	/**
 	 * Format warnings for display.
 	 *
-	 * @since 1.2.0
+	 * @since 1.0.0
 	 * @param array $warnings Array of warnings.
 	 * @return string HTML formatted warnings.
 	 */

@@ -95,7 +95,7 @@ class SNDP_Library {
 
 		// Cache the manifest.
 		set_transient( 'sndp_manifest', $manifest, $this->cache_expiration );
-		update_option( 'sndp_manifest_cache', $manifest );
+		update_option( 'sndp_manifest_cache', $manifest, false );
 
 		// Update last sync time.
 		$settings              = get_option( 'sndp_settings', array() );
@@ -225,6 +225,13 @@ class SNDP_Library {
 	private function store_snippet_locally( $snippet_id, $snippet_data ) {
 		$local_snippets                = get_option( 'sndp_local_snippets', array() );
 		$local_snippets[ $snippet_id ] = $snippet_data;
+
+		// Evict oldest entries if cache exceeds limit to prevent unbounded growth.
+		$max_local = 200;
+		if ( count( $local_snippets ) > $max_local ) {
+			$local_snippets = array_slice( $local_snippets, -$max_local, $max_local, true );
+		}
+
 		update_option( 'sndp_local_snippets', $local_snippets, false );
 	}
 
@@ -338,7 +345,7 @@ class SNDP_Library {
 	/**
 	 * Get snippets with pagination and search.
 	 *
-	 * @since 1.2.0
+	 * @since 1.0.0
 	 * @param array $args {
 	 *     Optional. Arguments for fetching snippets.
 	 *
@@ -402,11 +409,12 @@ class SNDP_Library {
 			);
 		}
 
-		$snippets = array_values( $snippets );
-		$total    = count( $snippets );
-		$pages    = ceil( $total / $args['per_page'] );
-		$page     = max( 1, min( $args['page'], $pages ) );
-		$offset   = ( $page - 1 ) * $args['per_page'];
+		$snippets         = array_values( $snippets );
+		$total            = count( $snippets );
+		$args['per_page'] = max( 1, $args['per_page'] );
+		$pages            = ceil( $total / $args['per_page'] );
+		$page             = max( 1, min( $args['page'], $pages ) );
+		$offset           = ( $page - 1 ) * $args['per_page'];
 
 		// Slice for pagination.
 		$snippets = array_slice( $snippets, $offset, $args['per_page'] );
@@ -422,7 +430,7 @@ class SNDP_Library {
 	/**
 	 * Get total snippet count.
 	 *
-	 * @since 1.2.0
+	 * @since 1.0.0
 	 * @return int
 	 */
 	public function get_total_snippets() {

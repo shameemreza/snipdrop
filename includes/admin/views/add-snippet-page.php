@@ -3,7 +3,7 @@
  * Add/Edit snippet page template.
  *
  * @package SnipDrop
- * @since   1.1.0
+ * @since   1.0.0
  */
 
 // phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Template variables passed from class.
@@ -188,7 +188,10 @@ unset( $post_types['attachment'] );
 
 				<!-- Location -->
 				<div class="sndp-metabox">
-					<h3><?php esc_html_e( 'Run Location', 'snipdrop' ); ?></h3>
+					<h3>
+						<?php esc_html_e( 'Run Location', 'snipdrop' ); ?>
+						<span class="sndp-help-tip" title="<?php esc_attr_e( 'Where should this snippet execute? "Everywhere" runs on all pages. Auto-Insert locations inject output at specific positions. "Shortcode Only" lets you place it manually via [snipdrop] shortcode.', 'snipdrop' ); ?>">?</span>
+					</h3>
 					<div class="sndp-metabox-content">
 						<select name="location" id="sndp-snippet-location">
 							<optgroup label="<?php esc_attr_e( 'Global', 'snipdrop' ); ?>">
@@ -234,7 +237,10 @@ unset( $post_types['attachment'] );
 
 				<!-- User Condition -->
 				<div class="sndp-metabox sndp-conditional-options">
-					<h3><?php esc_html_e( 'User Condition', 'snipdrop' ); ?></h3>
+					<h3>
+						<?php esc_html_e( 'User Condition', 'snipdrop' ); ?>
+						<span class="sndp-help-tip" title="<?php esc_attr_e( 'Restrict this snippet to logged-in users, logged-out users, or run for everyone.', 'snipdrop' ); ?>">?</span>
+					</h3>
 					<div class="sndp-metabox-content">
 						<select name="user_cond" id="sndp-snippet-user-cond">
 							<option value="all" <?php selected( $snippet['user_cond'], 'all' ); ?>>
@@ -272,25 +278,95 @@ unset( $post_types['attachment'] );
 					</div>
 				</div>
 
-				<!-- Specific Pages -->
+				<!-- Specific Posts/Pages -->
 				<div class="sndp-metabox sndp-conditional-options sndp-frontend-only">
-					<h3><?php esc_html_e( 'Specific Pages', 'snipdrop' ); ?></h3>
+					<h3>
+						<?php esc_html_e( 'Specific Posts / Pages', 'snipdrop' ); ?>
+						<span class="sndp-help-tip" title="<?php esc_attr_e( 'Search and select specific posts or pages where this snippet should run. Leave empty to run on all content.', 'snipdrop' ); ?>">?</span>
+					</h3>
 					<div class="sndp-metabox-content">
-						<input type="text"
-							name="page_ids"
-							id="sndp-snippet-page-ids"
-							class="regular-text"
-							value="<?php echo esc_attr( $snippet['page_ids'] ); ?>"
-							placeholder="<?php esc_attr_e( 'e.g., 1, 5, 23', 'snipdrop' ); ?>">
+						<div class="sndp-page-picker">
+							<input type="text"
+								id="sndp-page-search"
+								class="regular-text"
+								placeholder="<?php esc_attr_e( 'Search posts and pages...', 'snipdrop' ); ?>"
+								autocomplete="off">
+							<div id="sndp-page-search-results" class="sndp-page-search-results"></div>
+							<div id="sndp-selected-pages" class="sndp-selected-pages">
+								<?php
+								$saved_ids = array_filter( array_map( 'absint', explode( ',', $snippet['page_ids'] ) ) );
+								foreach ( $saved_ids as $pid ) :
+									$post_obj = get_post( $pid );
+									if ( ! $post_obj ) {
+										continue;
+									}
+									?>
+									<span class="sndp-page-tag" data-id="<?php echo esc_attr( $pid ); ?>">
+										<?php echo esc_html( $post_obj->post_title ); ?>
+										<span class="sndp-page-tag-type"><?php echo esc_html( get_post_type_object( $post_obj->post_type )->labels->singular_name ); ?></span>
+										<button type="button" class="sndp-page-tag-remove">&times;</button>
+									</span>
+								<?php endforeach; ?>
+							</div>
+							<input type="hidden"
+								name="page_ids"
+								id="sndp-snippet-page-ids"
+								value="<?php echo esc_attr( $snippet['page_ids'] ); ?>">
+						</div>
 						<p class="description">
-							<?php esc_html_e( 'Comma-separated post/page IDs. Leave empty to run on all pages.', 'snipdrop' ); ?>
+							<?php esc_html_e( 'Leave empty to run on all posts and pages.', 'snipdrop' ); ?>
 						</p>
 					</div>
 				</div>
 
+				<!-- Revisions -->
+				<?php
+				if ( $is_editing ) :
+					$revisions = SNDP_Custom_Snippets::instance()->get_revisions( $snippet['id'] );
+					if ( ! empty( $revisions ) ) :
+						?>
+						<div class="sndp-metabox">
+							<h3>
+								<?php esc_html_e( 'Revision History', 'snipdrop' ); ?>
+								<span class="sndp-help-tip" title="<?php esc_attr_e( 'Previous versions of this snippet are saved automatically. Click Restore to revert to that version.', 'snipdrop' ); ?>">?</span>
+							</h3>
+							<div class="sndp-metabox-content sndp-revisions-list">
+								<?php
+								foreach ( $revisions as $idx => $rev ) :
+									$rev_user = '';
+									if ( ! empty( $rev['user'] ) ) {
+										$u = get_userdata( $rev['user'] );
+										if ( $u ) {
+											$rev_user = $u->display_name;
+										}
+									}
+									?>
+									<div class="sndp-revision-item">
+										<span class="sndp-revision-date">
+											<?php echo esc_html( date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), strtotime( $rev['date'] ) ) ); ?>
+											<?php if ( $rev_user ) : ?>
+												<em><?php echo esc_html( $rev_user ); ?></em>
+											<?php endif; ?>
+										</span>
+										<button type="button"
+											class="button button-small sndp-restore-revision"
+											data-snippet-id="<?php echo esc_attr( $snippet['id'] ); ?>"
+											data-revision-index="<?php echo esc_attr( $idx ); ?>">
+											<?php esc_html_e( 'Restore', 'snipdrop' ); ?>
+										</button>
+									</div>
+								<?php endforeach; ?>
+							</div>
+						</div>
+					<?php endif; ?>
+				<?php endif; ?>
+
 				<!-- Hook (for PHP) -->
 				<div class="sndp-metabox sndp-php-options">
-					<h3><?php esc_html_e( 'Execution', 'snipdrop' ); ?></h3>
+					<h3>
+						<?php esc_html_e( 'Execution', 'snipdrop' ); ?>
+						<span class="sndp-help-tip" title="<?php esc_attr_e( 'Hook: the WordPress action this snippet attaches to. Priority: lower numbers run earlier. Default (init, 10) works for most snippets.', 'snipdrop' ); ?>">?</span>
+					</h3>
 					<div class="sndp-metabox-content">
 						<div class="sndp-form-field">
 							<label for="sndp-snippet-hook"><?php esc_html_e( 'Hook', 'snipdrop' ); ?></label>

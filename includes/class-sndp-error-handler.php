@@ -231,32 +231,38 @@ class SNDP_Error_Handler {
 	/**
 	 * Log error to file.
 	 *
-	 * @since 1.2.0
+	 * @since 1.0.0
 	 * @param string $snippet_id   Snippet ID.
 	 * @param string $snippet_type Snippet type (library or custom).
 	 * @param array  $error        Error data.
 	 */
 	public function log_error_to_file( $snippet_id, $snippet_type, $error ) {
-		// Create log directory if it doesn't exist.
-		if ( ! file_exists( $this->log_dir ) ) {
-			wp_mkdir_p( $this->log_dir );
+		global $wp_filesystem;
 
-			// Add index.php for security.
-			$index_file = $this->log_dir . '/index.php';
-			if ( ! file_exists( $index_file ) ) {
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-				file_put_contents( $index_file, '<?php // Silence is golden.' );
-			}
-
-			// Add .htaccess to prevent direct access.
-			$htaccess_file = $this->log_dir . '/.htaccess';
-			if ( ! file_exists( $htaccess_file ) ) {
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-				file_put_contents( $htaccess_file, 'Deny from all' );
-			}
+		if ( ! function_exists( 'WP_Filesystem' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
 		}
 
-		// Create log entry.
+		if ( ! WP_Filesystem() ) {
+			return;
+		}
+
+		if ( ! $wp_filesystem->is_dir( $this->log_dir ) ) {
+			wp_mkdir_p( $this->log_dir );
+
+			$wp_filesystem->put_contents(
+				$this->log_dir . '/index.php',
+				'<?php // Silence is golden.',
+				FS_CHMOD_FILE
+			);
+
+			$wp_filesystem->put_contents(
+				$this->log_dir . '/.htaccess',
+				'Deny from all',
+				FS_CHMOD_FILE
+			);
+		}
+
 		$log_entry = sprintf(
 			"[%s] [%s] [%s:%s]\nMessage: %s\nFile: %s\nLine: %d\n%s\n",
 			gmdate( 'Y-m-d H:i:s' ),
@@ -269,16 +275,15 @@ class SNDP_Error_Handler {
 			str_repeat( '-', 80 )
 		);
 
-		// Write to daily log file.
 		$log_file = $this->log_dir . '/error-' . gmdate( 'Y-m-d' ) . '.log';
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-		file_put_contents( $log_file, $log_entry, FILE_APPEND | LOCK_EX );
+		$existing = $wp_filesystem->exists( $log_file ) ? $wp_filesystem->get_contents( $log_file ) : '';
+		$wp_filesystem->put_contents( $log_file, $existing . $log_entry, FS_CHMOD_FILE );
 	}
 
 	/**
 	 * Get log directory path.
 	 *
-	 * @since 1.2.0
+	 * @since 1.0.0
 	 * @return string
 	 */
 	public function get_log_dir() {
@@ -288,14 +293,20 @@ class SNDP_Error_Handler {
 	/**
 	 * Get recent log entries.
 	 *
-	 * @since 1.2.0
+	 * @since 1.0.0
 	 * @param int $days Number of days to retrieve logs for.
 	 * @return array Log entries.
 	 */
 	public function get_recent_logs( $days = 7 ) {
+		global $wp_filesystem;
+
 		$logs = array();
 
-		if ( ! file_exists( $this->log_dir ) ) {
+		if ( ! function_exists( 'WP_Filesystem' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+		}
+
+		if ( ! WP_Filesystem() || ! $wp_filesystem->is_dir( $this->log_dir ) ) {
 			return $logs;
 		}
 
@@ -303,9 +314,8 @@ class SNDP_Error_Handler {
 			$date     = gmdate( 'Y-m-d', strtotime( "-{$i} days" ) );
 			$log_file = $this->log_dir . '/error-' . $date . '.log';
 
-			if ( file_exists( $log_file ) ) {
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-				$content = file_get_contents( $log_file );
+			if ( $wp_filesystem->exists( $log_file ) ) {
+				$content = $wp_filesystem->get_contents( $log_file );
 				if ( $content ) {
 					$logs[ $date ] = $content;
 				}
@@ -318,7 +328,7 @@ class SNDP_Error_Handler {
 	/**
 	 * Clear old log files.
 	 *
-	 * @since 1.2.0
+	 * @since 1.0.0
 	 * @param int $days Keep logs newer than this many days.
 	 */
 	public function clear_old_logs( $days = 30 ) {
@@ -328,6 +338,10 @@ class SNDP_Error_Handler {
 
 		$cutoff = strtotime( "-{$days} days" );
 		$files  = glob( $this->log_dir . '/error-*.log' );
+
+		if ( ! is_array( $files ) ) {
+			return;
+		}
 
 		foreach ( $files as $file ) {
 			// Extract date from filename.
@@ -343,7 +357,7 @@ class SNDP_Error_Handler {
 	/**
 	 * Get error history for all snippets.
 	 *
-	 * @since 1.2.0
+	 * @since 1.0.0
 	 * @return array Error history.
 	 */
 	public function get_error_history() {
@@ -353,7 +367,7 @@ class SNDP_Error_Handler {
 	/**
 	 * Add error to history.
 	 *
-	 * @since 1.2.0
+	 * @since 1.0.0
 	 * @param string $snippet_id   Snippet ID.
 	 * @param string $snippet_type Snippet type.
 	 * @param array  $error        Error data.
@@ -382,7 +396,7 @@ class SNDP_Error_Handler {
 	/**
 	 * Get error history for a specific snippet.
 	 *
-	 * @since 1.2.0
+	 * @since 1.0.0
 	 * @param string $snippet_id   Snippet ID.
 	 * @param string $snippet_type Snippet type.
 	 * @return array Error history for the snippet.
@@ -397,7 +411,7 @@ class SNDP_Error_Handler {
 	/**
 	 * Clear error history for a snippet.
 	 *
-	 * @since 1.2.0
+	 * @since 1.0.0
 	 * @param string $snippet_id   Snippet ID.
 	 * @param string $snippet_type Snippet type.
 	 */

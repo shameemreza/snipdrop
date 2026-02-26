@@ -8,6 +8,22 @@
 ( function( $ ) {
 	'use strict';
 
+	/**
+	 * Escape a string for safe insertion into HTML.
+	 */
+	function escHtml( str ) {
+		var div = document.createElement( 'div' );
+		div.appendChild( document.createTextNode( str ) );
+		return div.innerHTML;
+	}
+
+	/**
+	 * Escape a string for safe insertion into an HTML attribute.
+	 */
+	function escAttr( str ) {
+		return escHtml( str ).replace( /"/g, '&quot;' ).replace( /'/g, '&#39;' );
+	}
+
 	var SNDP_Admin = {
 
 		/**
@@ -40,6 +56,26 @@
 			this.bindEvents();
 			this.initCodeEditor();
 			this.initLibrary();
+		},
+
+		/**
+		 * Show an inline admin notice instead of SNDP_Admin.showNotice().
+		 */
+		showNotice: function( message, type ) {
+			type = type || 'error';
+			var $wrap = $( '.wrap' ).first();
+			if ( ! $wrap.length ) {
+				$wrap = $( '#wpbody-content' );
+			}
+			var $notice = $( '<div class="notice notice-' + escAttr( type ) + ' is-dismissible sndp-inline-notice"><p>' + escHtml( message ) + '</p></div>' );
+			$wrap.find( '.sndp-inline-notice' ).remove();
+			$wrap.prepend( $notice );
+			if ( wp && wp.a11y && wp.a11y.speak ) {
+				wp.a11y.speak( message );
+			}
+			setTimeout( function() {
+				$notice.fadeOut( 300, function() { $( this ).remove(); } );
+			}, 6000 );
 		},
 
 		/**
@@ -88,10 +124,49 @@
 			$( document ).on( 'click', '.sndp-retry-fetch', this.retryFetch );
 			$( document ).on( 'click', '.sndp-sync-and-retry', this.syncAndRetry );
 
+			// Custom snippets search and bulk actions.
+			$( '#sndp-custom-search' ).on( 'input', this.filterCustomSnippets );
+			$( '#sndp-select-all' ).on( 'change', this.handleSelectAll );
+			$( document ).on( 'change', '.sndp-bulk-check', this.handleBulkCheckChange );
+			$( '#sndp-bulk-apply' ).on( 'click', this.handleBulkApply );
+
+			// Import/Export.
+			$( '#sndp-import-trigger' ).on( 'click', this.showImportForm );
+			$( '#sndp-import-cancel' ).on( 'click', this.hideImportForm );
+			$( '#sndp-import-file' ).on( 'change', this.handleImportFileSelect );
+			$( '#sndp-import-upload' ).on( 'submit', this.handleImportSubmit );
+
+			// View toggle.
+			$( document ).on( 'click', '.sndp-view-btn', this.handleViewToggle );
+
+			// Revisions.
+			$( document ).on( 'click', '.sndp-restore-revision', this.handleRestoreRevision );
+
 			// ESC key to close modal.
 			$( document ).on( 'keyup', function( e ) {
 				if ( 27 === e.keyCode ) {
 					SNDP_Admin.closeModal();
+				}
+			} );
+
+			// Page picker.
+			$( '#sndp-page-search' ).on( 'input', this.handlePageSearch );
+			$( document ).on( 'click', '.sndp-page-result', this.handlePageSelect );
+			$( document ).on( 'click', '.sndp-page-tag-remove', this.handlePageRemove );
+			$( document ).on( 'click', function( e ) {
+				if ( ! $( e.target ).closest( '.sndp-page-picker' ).length ) {
+					$( '#sndp-page-search-results' ).empty().hide();
+				}
+			} );
+
+			// Ctrl+S / Cmd+S to save custom snippet.
+			$( document ).on( 'keydown', function( e ) {
+				if ( ( e.ctrlKey || e.metaKey ) && 83 === e.keyCode ) {
+					var $form = $( '#sndp-snippet-form' );
+					if ( $form.length ) {
+						e.preventDefault();
+						$form.trigger( 'submit' );
+					}
 				}
 			} );
 		},
@@ -101,6 +176,13 @@
 		 */
 		initLibrary: function() {
 			if ( $( '#sndp-snippets-grid' ).length ) {
+				// Restore saved view preference.
+				var savedView = localStorage.getItem( 'sndp_view_mode' ) || 'grid';
+				if ( 'list' === savedView ) {
+					$( '#sndp-snippets-grid' ).addClass( 'sndp-list-view' );
+					$( '.sndp-view-btn' ).removeClass( 'active' );
+					$( '.sndp-view-btn[data-view="list"]' ).addClass( 'active' );
+				}
 				this.loadSnippets();
 			}
 		},
@@ -307,11 +389,68 @@
 				this.editor = wp.codeEditor.initialize( $textarea, sndp_admin.editor_settings );
 			}
 
-			// Toggle PHP options visibility.
-			this.togglePhpOptions();
+			// Auto-detect code type on first paste into an empty editor.
+			this.codeAutoDetected = false;
+			$textarea.on( 'paste', function() {
+				if ( SNDP_Admin.codeAutoDetected ) {
+					return;
+				}
+				var current = $textarea.val().trim();
+				if ( current.length > 0 ) {
+					return;
+				}
+				setTimeout( function() {
+					var pasted = $textarea.val().trim();
+					var detected = SNDP_Admin.detectCodeType( pasted );
+					if ( detected ) {
+						$( 'input[name="code_type"][value="' + detected + '"]' ).prop( 'checked', true ).trigger( 'change' );
+						SNDP_Admin.codeAutoDetected = true;
+					}
+				}, 50 );
+			} );
 
-			// Toggle conditional options visibility.
+			// Also handle paste in CodeMirror.
+			if ( this.editor && this.editor.codemirror ) {
+				this.editor.codemirror.on( 'paste', function( cm ) {
+					if ( SNDP_Admin.codeAutoDetected ) {
+						return;
+					}
+					var current = cm.getValue().trim();
+					if ( current.length > 0 ) {
+						return;
+					}
+					setTimeout( function() {
+						var pasted = cm.getValue().trim();
+						var detected = SNDP_Admin.detectCodeType( pasted );
+						if ( detected ) {
+							$( 'input[name="code_type"][value="' + detected + '"]' ).prop( 'checked', true ).trigger( 'change' );
+							SNDP_Admin.codeAutoDetected = true;
+						}
+					}, 50 );
+				} );
+			}
+
+			this.togglePhpOptions();
 			this.toggleConditionalOptions();
+		},
+
+		detectCodeType: function( code ) {
+			if ( ! code ) {
+				return null;
+			}
+			if ( /^<\?php\b/i.test( code ) || /\bfunction\s+\w+\s*\(/.test( code ) || /\badd_action\s*\(/.test( code ) || /\badd_filter\s*\(/.test( code ) ) {
+				return 'php';
+			}
+			if ( /^<script[\s>]/i.test( code ) || /\bdocument\.getElementById\b/.test( code ) || /\bjQuery\s*\(/.test( code ) || /\bconsole\.log\b/.test( code ) ) {
+				return 'js';
+			}
+			if ( /^<style[\s>]/i.test( code ) || /\{[\s\S]*?[a-z-]+\s*:\s*[^;]+;/.test( code ) || /^[.#@][a-zA-Z]/.test( code ) ) {
+				return 'css';
+			}
+			if ( /^<(!DOCTYPE|html|div|p|span|a\s|h[1-6]|section|header|footer|nav|main|article)/i.test( code ) ) {
+				return 'html';
+			}
+			return null;
 		},
 
 		/**
@@ -387,18 +526,19 @@
 							$card.removeClass( 'enabled' );
 							$toggle.prop( 'checked', false );
 						}
+						SNDP_Admin.showNotice( response.data.message, 'success' );
 					} else {
 						// Check for missing plugins error.
 						var errorMsg = response.data.message || sndp_admin.strings.error;
 						if ( response.data.missing_plugins && response.data.missing_plugins.length ) {
 							errorMsg = sndp_admin.strings.plugin_required + '\n\n' + response.data.missing_plugins.join( '\n' );
 						}
-						alert( errorMsg );
+						SNDP_Admin.showNotice( errorMsg );
 						$toggle.prop( 'checked', ! $toggle.prop( 'checked' ) );
 					}
 				},
 				error: function() {
-					alert( sndp_admin.strings.error );
+					SNDP_Admin.showNotice( sndp_admin.strings.error );
 					$toggle.prop( 'checked', ! $toggle.prop( 'checked' ) );
 				},
 				complete: function() {
@@ -434,11 +574,11 @@
 					if ( response.success ) {
 						location.reload();
 					} else {
-						alert( response.data.message || sndp_admin.strings.error );
+						SNDP_Admin.showNotice( response.data.message || sndp_admin.strings.error );
 					}
 				},
 				error: function() {
-					alert( sndp_admin.strings.error );
+					SNDP_Admin.showNotice( sndp_admin.strings.error );
 				},
 				complete: function() {
 					$btn.removeClass( 'loading' ).prop( 'disabled', false );
@@ -557,10 +697,9 @@
 			// Display long description if available.
 			var $description = $( '#sndp-modal-description' );
 			if ( data.long_description ) {
-				// Convert newlines to paragraphs.
 				var descHtml = data.long_description
 					.split( /\n\n+/ )
-					.map( function( p ) { return '<p>' + p.replace( /\n/g, '<br>' ) + '</p>'; } )
+					.map( function( p ) { return '<p>' + escHtml( p ).replace( /\n/g, '<br>' ) + '</p>'; } )
 					.join( '' );
 				$description.html( descHtml ).show();
 			} else {
@@ -577,22 +716,22 @@
 			$source.empty();
 
 			if ( data.author && data.author.name ) {
-				var authorHtml = '<strong>Author:</strong> ';
+				var authorHtml = '<strong>' + escHtml( sndp_admin.strings.author_label ) + '</strong> ';
 				if ( data.author.url ) {
-					authorHtml += '<a href="' + data.author.url + '" target="_blank" rel="noopener noreferrer">' + data.author.name + '</a>';
+					authorHtml += '<a href="' + escAttr( data.author.url ) + '" target="_blank" rel="noopener noreferrer">' + escHtml( data.author.name ) + '</a>';
 				} else {
-					authorHtml += data.author.name;
+					authorHtml += escHtml( data.author.name );
 				}
 				$author.html( authorHtml );
 				hasCredits = true;
 			}
 
 			if ( data.source && data.source.name ) {
-				var sourceHtml = '<strong>Source:</strong> ';
+				var sourceHtml = '<strong>' + escHtml( sndp_admin.strings.source_label ) + '</strong> ';
 				if ( data.source.url ) {
-					sourceHtml += '<a href="' + data.source.url + '" target="_blank" rel="noopener noreferrer">' + data.source.name + '</a>';
+					sourceHtml += '<a href="' + escAttr( data.source.url ) + '" target="_blank" rel="noopener noreferrer">' + escHtml( data.source.name ) + '</a>';
 				} else {
-					sourceHtml += data.source.name;
+					sourceHtml += escHtml( data.source.name );
 				}
 				$source.html( sourceHtml );
 				hasCredits = true;
@@ -614,11 +753,11 @@
 			$( '#sndp-modal-credits' ).hide();
 
 			var errorHtml = '<div class="sndp-error-icon"><span class="dashicons dashicons-warning"></span></div>';
-			errorHtml += '<p class="sndp-error-message">' + message + '</p>';
-			errorHtml += '<p class="sndp-error-hint">This may be a temporary issue. Try syncing the library or wait a moment.</p>';
+			errorHtml += '<p class="sndp-error-message">' + escHtml( message ) + '</p>';
+			errorHtml += '<p class="sndp-error-hint">' + escHtml( sndp_admin.strings.error_hint ) + '</p>';
 			errorHtml += '<div class="sndp-error-actions">';
-			errorHtml += '<button type="button" class="button sndp-retry-fetch" data-snippet-id="' + snippetId + '" data-title="' + title + '">Try Again</button>';
-			errorHtml += '<button type="button" class="button sndp-sync-and-retry" data-snippet-id="' + snippetId + '" data-title="' + title + '">Sync Library</button>';
+			errorHtml += '<button type="button" class="button sndp-retry-fetch" data-snippet-id="' + escAttr( snippetId ) + '" data-title="' + escAttr( title ) + '">' + escHtml( sndp_admin.strings.try_again ) + '</button>';
+			errorHtml += '<button type="button" class="button sndp-sync-and-retry" data-snippet-id="' + escAttr( snippetId ) + '" data-title="' + escAttr( title ) + '">' + escHtml( sndp_admin.strings.sync_library ) + '</button>';
 			errorHtml += '</div>';
 
 			$( '#sndp-code-error' ).html( errorHtml ).show();
@@ -634,7 +773,7 @@
 			var title = $btn.data( 'title' );
 			var $originalBtn = $( '.sndp-view-code[data-snippet-id="' + snippetId + '"]' );
 
-			$btn.prop( 'disabled', true ).text( 'Loading...' );
+			$btn.prop( 'disabled', true ).text( sndp_admin.strings.loading_btn );
 			SNDP_Admin.fetchSnippetCode( snippetId, title, $originalBtn );
 		},
 
@@ -648,7 +787,7 @@
 			var title = $btn.data( 'title' );
 			var $originalBtn = $( '.sndp-view-code[data-snippet-id="' + snippetId + '"]' );
 
-			$btn.prop( 'disabled', true ).text( 'Syncing...' );
+			$btn.prop( 'disabled', true ).text( sndp_admin.strings.syncing );
 			$( '.sndp-retry-fetch' ).prop( 'disabled', true );
 
 			// First sync, then retry.
@@ -711,11 +850,11 @@
 
 						$( '#sndp-configure-modal' ).addClass( 'sndp-modal-open' );
 					} else {
-						alert( response.data.message || sndp_admin.strings.error );
+						SNDP_Admin.showNotice( response.data.message || sndp_admin.strings.error );
 					}
 				},
 				error: function() {
-					alert( sndp_admin.strings.error );
+					SNDP_Admin.showNotice( sndp_admin.strings.error );
 				},
 				complete: function() {
 					$btn.prop( 'disabled', false );
@@ -727,35 +866,37 @@
 		 * Build configuration field HTML.
 		 */
 		buildConfigField: function( setting, value ) {
+			var safeId = escAttr( setting.id );
+			var safeValue = escAttr( value );
 			var html = '<div class="sndp-configure-field">';
-			html += '<label for="sndp-config-' + setting.id + '">' + setting.label + '</label>';
+			html += '<label for="sndp-config-' + safeId + '">' + escHtml( setting.label ) + '</label>';
 
 			switch ( setting.type ) {
 				case 'textarea':
-					html += '<textarea id="sndp-config-' + setting.id + '" name="' + setting.id + '" rows="3">' + value + '</textarea>';
+					html += '<textarea id="sndp-config-' + safeId + '" name="' + safeId + '" rows="3">' + escHtml( value ) + '</textarea>';
 					break;
 
 				case 'select':
-					html += '<select id="sndp-config-' + setting.id + '" name="' + setting.id + '">';
+					html += '<select id="sndp-config-' + safeId + '" name="' + safeId + '">';
 					if ( setting.options ) {
 						$.each( setting.options, function( optValue, optLabel ) {
 							var selected = value === optValue ? ' selected' : '';
-							html += '<option value="' + optValue + '"' + selected + '>' + optLabel + '</option>';
+							html += '<option value="' + escAttr( optValue ) + '"' + selected + '>' + escHtml( optLabel ) + '</option>';
 						} );
 					}
 					html += '</select>';
 					break;
 
 				case 'number':
-					html += '<input type="number" id="sndp-config-' + setting.id + '" name="' + setting.id + '" value="' + value + '" class="small-text">';
+					html += '<input type="number" id="sndp-config-' + safeId + '" name="' + safeId + '" value="' + safeValue + '" class="small-text">';
 					break;
 
-				default: // text
-					html += '<input type="text" id="sndp-config-' + setting.id + '" name="' + setting.id + '" value="' + value + '" class="regular-text">';
+				default:
+					html += '<input type="text" id="sndp-config-' + safeId + '" name="' + safeId + '" value="' + safeValue + '" class="regular-text">';
 			}
 
 			if ( setting.description ) {
-				html += '<p class="description">' + setting.description + '</p>';
+				html += '<p class="description">' + escHtml( setting.description ) + '</p>';
 			}
 
 			html += '</div>';
@@ -794,14 +935,14 @@
 					if ( response.success ) {
 						SNDP_Admin.closeModal();
 					} else {
-						alert( response.data.message || sndp_admin.strings.error );
+						SNDP_Admin.showNotice( response.data.message || sndp_admin.strings.error );
 					}
 				},
 				error: function() {
-					alert( sndp_admin.strings.error );
+					SNDP_Admin.showNotice( sndp_admin.strings.error );
 				},
 				complete: function() {
-					$form.find( 'button[type="submit"]' ).prop( 'disabled', false ).text( 'Save Configuration' );
+					$form.find( 'button[type="submit"]' ).prop( 'disabled', false ).text( sndp_admin.strings.save_config );
 				}
 			} );
 		},
@@ -836,15 +977,15 @@
 				},
 				success: function( response ) {
 					if ( response.success ) {
-						if ( confirm( sndp_admin.strings.copied + ' Edit now?' ) ) {
+						if ( confirm( sndp_admin.strings.copied + ' ' + sndp_admin.strings.edit_now ) ) {
 							window.location.href = response.data.edit_url;
 						}
 					} else {
-						alert( response.data.message || sndp_admin.strings.error );
+						SNDP_Admin.showNotice( response.data.message || sndp_admin.strings.error );
 					}
 				},
 				error: function() {
-					alert( sndp_admin.strings.error );
+					SNDP_Admin.showNotice( sndp_admin.strings.error );
 				},
 				complete: function() {
 					$btn.prop( 'disabled', false );
@@ -879,13 +1020,14 @@
 							$row.removeClass( 'sndp-snippet-active' );
 							$toggle.prop( 'checked', false );
 						}
+						SNDP_Admin.showNotice( response.data.message, 'success' );
 					} else {
-						alert( response.data.message || sndp_admin.strings.error );
+						SNDP_Admin.showNotice( response.data.message || sndp_admin.strings.error );
 						$toggle.prop( 'checked', ! $toggle.prop( 'checked' ) );
 					}
 				},
 				error: function() {
-					alert( sndp_admin.strings.error );
+					SNDP_Admin.showNotice( sndp_admin.strings.error );
 					$toggle.prop( 'checked', ! $toggle.prop( 'checked' ) );
 				},
 				complete: function() {
@@ -922,11 +1064,11 @@
 							$( this ).remove();
 						} );
 					} else {
-						alert( response.data.message || sndp_admin.strings.error );
+						SNDP_Admin.showNotice( response.data.message || sndp_admin.strings.error );
 					}
 				},
 				error: function() {
-					alert( sndp_admin.strings.error );
+					SNDP_Admin.showNotice( sndp_admin.strings.error );
 				}
 			} );
 		},
@@ -952,11 +1094,11 @@
 					if ( response.success ) {
 						location.reload();
 					} else {
-						alert( response.data.message || sndp_admin.strings.error );
+						SNDP_Admin.showNotice( response.data.message || sndp_admin.strings.error );
 					}
 				},
 				error: function() {
-					alert( sndp_admin.strings.error );
+					SNDP_Admin.showNotice( sndp_admin.strings.error );
 				}
 			} );
 		},
@@ -1017,9 +1159,9 @@
 							// Update shortcode display.
 							$( '#sndp-shortcode-code' ).text( '[snipdrop id="' + response.data.snippet_id + '"]' );
 						}
-						$submitBtn.text( 'Saved!' );
+						$submitBtn.text( sndp_admin.strings.saved );
 						setTimeout( function() {
-							$submitBtn.text( 'Update Snippet' );
+							$submitBtn.text( sndp_admin.strings.update_snippet );
 						}, 1500 );
 
 						// Show warnings if any.
@@ -1031,11 +1173,11 @@
 						// Show shortcode hint if location is shortcode.
 						SNDP_Admin.toggleConditionalOptions();
 					} else {
-						alert( response.data.message || sndp_admin.strings.error );
+						SNDP_Admin.showNotice( response.data.message || sndp_admin.strings.error );
 					}
 				},
 				error: function() {
-					alert( sndp_admin.strings.error );
+					SNDP_Admin.showNotice( sndp_admin.strings.error );
 				},
 				complete: function() {
 					$submitBtn.prop( 'disabled', false );
@@ -1102,6 +1244,286 @@
 				setTimeout( function() {
 					$btn.find( '.dashicons' ).removeClass( 'dashicons-yes' ).addClass( 'dashicons-clipboard' );
 				}, 2000 );
+			} );
+		},
+
+		handleSelectAll: function() {
+			var checked = $( this ).prop( 'checked' );
+			$( '.sndp-bulk-check' ).prop( 'checked', checked );
+			SNDP_Admin.updateBulkApplyState();
+		},
+
+		handleBulkCheckChange: function() {
+			var total   = $( '.sndp-bulk-check' ).length;
+			var checked = $( '.sndp-bulk-check:checked' ).length;
+			$( '#sndp-select-all' ).prop( 'checked', total === checked && total > 0 );
+			SNDP_Admin.updateBulkApplyState();
+		},
+
+		updateBulkApplyState: function() {
+			var hasChecked = $( '.sndp-bulk-check:checked' ).length > 0;
+			$( '#sndp-bulk-apply' ).prop( 'disabled', ! hasChecked );
+		},
+
+		handleBulkApply: function( e ) {
+			e.preventDefault();
+			var action = $( '#sndp-bulk-action' ).val();
+			if ( ! action ) {
+				SNDP_Admin.showNotice( sndp_admin.strings.error );
+				return;
+			}
+
+			var ids = [];
+			$( '.sndp-bulk-check:checked' ).each( function() {
+				ids.push( $( this ).val() );
+			} );
+
+			if ( ! ids.length ) {
+				return;
+			}
+
+			if ( 'delete' === action && ! confirm( sndp_admin.strings.confirm_delete ) ) {
+				return;
+			}
+
+			var $btn = $( this );
+			$btn.prop( 'disabled', true );
+
+			$.ajax( {
+				url: sndp_admin.ajax_url,
+				type: 'POST',
+				data: {
+					action: 'sndp_bulk_action',
+					nonce: sndp_admin.nonce,
+					bulk_action: action,
+					snippet_ids: ids
+				},
+				success: function( response ) {
+					if ( response.success ) {
+						SNDP_Admin.showNotice( response.data.message, 'success' );
+						setTimeout( function() { location.reload(); }, 1000 );
+					} else {
+						SNDP_Admin.showNotice( response.data.message || sndp_admin.strings.error );
+					}
+				},
+				error: function() {
+					SNDP_Admin.showNotice( sndp_admin.strings.error );
+				},
+				complete: function() {
+					$btn.prop( 'disabled', false );
+				}
+			} );
+		},
+
+		filterCustomSnippets: function() {
+			var query = $( this ).val().toLowerCase();
+			$( '.sndp-custom-snippets-table tbody tr' ).each( function() {
+				var $row = $( this );
+				var title = $row.find( '.column-title' ).text().toLowerCase();
+				var type  = $row.find( '.column-type' ).text().toLowerCase();
+				$row.toggle( title.indexOf( query ) !== -1 || type.indexOf( query ) !== -1 );
+			} );
+		},
+
+		pageSearchTimer: null,
+
+		handlePageSearch: function() {
+			var query = $( this ).val().trim();
+			var $results = $( '#sndp-page-search-results' );
+
+			clearTimeout( SNDP_Admin.pageSearchTimer );
+
+			if ( query.length < 2 ) {
+				$results.empty().hide();
+				return;
+			}
+
+			SNDP_Admin.pageSearchTimer = setTimeout( function() {
+				$.ajax( {
+					url: sndp_admin.ajax_url,
+					type: 'POST',
+					data: {
+						action: 'sndp_search_posts',
+						nonce: sndp_admin.nonce,
+						search: query
+					},
+					success: function( response ) {
+						$results.empty();
+						if ( ! response.success || ! response.data.results.length ) {
+							$results.html( '<div class="sndp-page-result-empty">' + escHtml( sndp_admin.strings.no_results ) + '</div>' ).show();
+							return;
+						}
+
+						var selectedIds = ( $( '#sndp-snippet-page-ids' ).val() || '' ).split( ',' ).filter( Boolean );
+
+						$.each( response.data.results, function( i, item ) {
+							if ( selectedIds.indexOf( String( item.id ) ) !== -1 ) {
+								return;
+							}
+							$results.append(
+								'<div class="sndp-page-result" data-id="' + escAttr( item.id ) + '" data-title="' + escAttr( item.title ) + '" data-type="' + escAttr( item.post_type ) + '">' +
+								escHtml( item.title ) +
+								' <span class="sndp-page-result-type">' + escHtml( item.post_type ) + ' #' + item.id + '</span>' +
+								'</div>'
+							);
+						} );
+
+						if ( ! $results.children( '.sndp-page-result' ).length ) {
+							$results.html( '<div class="sndp-page-result-empty">' + escHtml( sndp_admin.strings.no_results ) + '</div>' );
+						}
+
+						$results.show();
+					}
+				} );
+			}, 300 );
+		},
+
+		handlePageSelect: function() {
+			var $item = $( this );
+			var id    = $item.data( 'id' );
+			var title = $item.data( 'title' );
+			var type  = $item.data( 'type' );
+
+			var tag = '<span class="sndp-page-tag" data-id="' + escAttr( id ) + '">' +
+				escHtml( title ) +
+				' <span class="sndp-page-tag-type">' + escHtml( type ) + '</span>' +
+				'<button type="button" class="sndp-page-tag-remove">&times;</button>' +
+				'</span>';
+
+			$( '#sndp-selected-pages' ).append( tag );
+			SNDP_Admin.syncPageIds();
+
+			$( '#sndp-page-search' ).val( '' );
+			$( '#sndp-page-search-results' ).empty().hide();
+		},
+
+		handlePageRemove: function( e ) {
+			e.preventDefault();
+			$( this ).closest( '.sndp-page-tag' ).remove();
+			SNDP_Admin.syncPageIds();
+		},
+
+		syncPageIds: function() {
+			var ids = [];
+			$( '#sndp-selected-pages .sndp-page-tag' ).each( function() {
+				ids.push( $( this ).data( 'id' ) );
+			} );
+			$( '#sndp-snippet-page-ids' ).val( ids.join( ',' ) );
+		},
+
+		handleRestoreRevision: function( e ) {
+			e.preventDefault();
+			var $btn = $( this );
+			var snippetId = $btn.data( 'snippet-id' );
+			var revisionIndex = $btn.data( 'revision-index' );
+
+			if ( ! confirm( sndp_admin.strings.confirm_restore || 'Restore this revision? Current code will be saved as a new revision.' ) ) {
+				return;
+			}
+
+			$btn.prop( 'disabled', true );
+
+			$.ajax( {
+				url: sndp_admin.ajax_url,
+				type: 'POST',
+				data: {
+					action: 'sndp_restore_revision',
+					nonce: sndp_admin.nonce,
+					snippet_id: snippetId,
+					revision_index: revisionIndex
+				},
+				success: function( response ) {
+					if ( response.success ) {
+						SNDP_Admin.showNotice( response.data.message, 'success' );
+						setTimeout( function() { location.reload(); }, 1000 );
+					} else {
+						SNDP_Admin.showNotice( response.data.message || sndp_admin.strings.error );
+					}
+				},
+				error: function() {
+					SNDP_Admin.showNotice( sndp_admin.strings.error );
+				},
+				complete: function() {
+					$btn.prop( 'disabled', false );
+				}
+			} );
+		},
+
+		handleViewToggle: function( e ) {
+			e.preventDefault();
+			var $btn = $( this );
+			var view = $btn.data( 'view' );
+
+			$( '.sndp-view-btn' ).removeClass( 'active' );
+			$btn.addClass( 'active' );
+
+			var $grid = $( '#sndp-snippets-grid' );
+			if ( 'list' === view ) {
+				$grid.addClass( 'sndp-list-view' );
+			} else {
+				$grid.removeClass( 'sndp-list-view' );
+			}
+
+			localStorage.setItem( 'sndp_view_mode', view );
+		},
+
+		showImportForm: function( e ) {
+			e.preventDefault();
+			$( '#sndp-import-form' ).slideDown( 200 );
+		},
+
+		hideImportForm: function( e ) {
+			e.preventDefault();
+			$( '#sndp-import-form' ).slideUp( 200 );
+			$( '#sndp-import-file' ).val( '' );
+			$( '#sndp-import-submit' ).prop( 'disabled', true );
+		},
+
+		handleImportFileSelect: function() {
+			var hasFile = $( this ).val().length > 0;
+			$( '#sndp-import-submit' ).prop( 'disabled', ! hasFile );
+		},
+
+		handleImportSubmit: function( e ) {
+			e.preventDefault();
+
+			var $form    = $( this );
+			var $submit  = $form.find( '#sndp-import-submit' );
+			var fileEl   = document.getElementById( 'sndp-import-file' );
+
+			if ( ! fileEl.files || ! fileEl.files[0] ) {
+				return;
+			}
+
+			var formData = new FormData();
+			formData.append( 'action', 'sndp_import_snippets' );
+			formData.append( 'nonce', sndp_admin.nonce );
+			formData.append( 'import_file', fileEl.files[0] );
+
+			$submit.prop( 'disabled', true ).text( sndp_admin.strings.saving );
+
+			$.ajax( {
+				url: sndp_admin.ajax_url,
+				type: 'POST',
+				data: formData,
+				processData: false,
+				contentType: false,
+				success: function( response ) {
+					if ( response.success ) {
+						SNDP_Admin.showNotice( response.data.message, 'success' );
+						setTimeout( function() {
+							location.reload();
+						}, 1500 );
+					} else {
+						SNDP_Admin.showNotice( response.data.message || sndp_admin.strings.error );
+					}
+				},
+				error: function() {
+					SNDP_Admin.showNotice( sndp_admin.strings.error );
+				},
+				complete: function() {
+					$submit.prop( 'disabled', false ).text( sndp_admin.strings.import_submit );
+				}
 			} );
 		},
 

@@ -94,6 +94,22 @@ class SNDP_Admin {
 		add_action( 'wp_ajax_sndp_toggle_custom_snippet', array( $this, 'ajax_toggle_custom_snippet' ) );
 		add_action( 'wp_ajax_sndp_duplicate_custom_snippet', array( $this, 'ajax_duplicate_custom_snippet' ) );
 		add_action( 'wp_ajax_sndp_get_custom_snippet', array( $this, 'ajax_get_custom_snippet' ) );
+
+		// Import/Export handlers.
+		add_action( 'admin_post_sndp_export_snippets', array( $this, 'handle_export_snippets' ) );
+		add_action( 'wp_ajax_sndp_import_snippets', array( $this, 'ajax_import_snippets' ) );
+
+		// Bulk actions.
+		add_action( 'wp_ajax_sndp_bulk_action', array( $this, 'ajax_bulk_action' ) );
+
+		// Admin bar.
+		add_action( 'admin_bar_menu', array( $this, 'admin_bar_menu' ), 100 );
+
+		// Revisions.
+		add_action( 'wp_ajax_sndp_restore_revision', array( $this, 'ajax_restore_revision' ) );
+
+		// Post/page search for conditional targeting.
+		add_action( 'wp_ajax_sndp_search_posts', array( $this, 'ajax_search_posts' ) );
 	}
 
 	/**
@@ -102,9 +118,15 @@ class SNDP_Admin {
 	 * @since 1.0.0
 	 */
 	public function admin_menu() {
+		$new_count  = $this->get_new_snippet_count();
+		$menu_label = __( 'SnipDrop', 'snipdrop' );
+		if ( $new_count > 0 ) {
+			$menu_label .= ' <span class="awaiting-mod">' . absint( $new_count ) . '</span>';
+		}
+
 		add_menu_page(
 			__( 'SnipDrop', 'snipdrop' ),
-			__( 'SnipDrop', 'snipdrop' ),
+			$menu_label,
 			'manage_options',
 			'snipdrop',
 			array( $this, 'render_admin_page' ),
@@ -224,6 +246,18 @@ class SNDP_Admin {
 					'page'             => __( 'Page', 'snipdrop' ),
 					'prev'             => __( 'Previous', 'snipdrop' ),
 					'next'             => __( 'Next', 'snipdrop' ),
+					'loading_btn'      => __( 'Loading...', 'snipdrop' ),
+					'try_again'        => __( 'Try Again', 'snipdrop' ),
+					'sync_library'     => __( 'Sync Library', 'snipdrop' ),
+					'error_hint'       => __( 'This may be a temporary issue. Try syncing the library or wait a moment.', 'snipdrop' ),
+					'save_config'      => __( 'Save Configuration', 'snipdrop' ),
+					'saved'            => __( 'Saved!', 'snipdrop' ),
+					'update_snippet'   => __( 'Update Snippet', 'snipdrop' ),
+					'author_label'     => __( 'Author:', 'snipdrop' ),
+					'source_label'     => __( 'Source:', 'snipdrop' ),
+					'edit_now'         => __( 'Edit now?', 'snipdrop' ),
+					'import_submit'    => __( 'Upload & Import', 'snipdrop' ),
+					'confirm_restore'  => __( 'Restore this revision? Current code will be saved as a new revision.', 'snipdrop' ),
 				),
 			)
 		);
@@ -394,7 +428,7 @@ class SNDP_Admin {
 	/**
 	 * Check for missing required plugins.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 * @param array $required_plugins Array of required plugin slugs.
 	 * @return array Array of missing plugin names.
 	 */
@@ -466,12 +500,34 @@ class SNDP_Admin {
 			wp_send_json_error( array( 'message' => $manifest->get_error_message() ) );
 		}
 
+		// Refresh new snippet count cache.
+		delete_transient( 'sndp_new_snippet_count' );
+		$new_count = $this->get_new_snippet_count();
+
+		/**
+		 * Fires after the snippet library has been synced.
+		 *
+		 * @since 1.0.0
+		 * @param array $manifest The synced manifest data.
+		 */
+		do_action( 'snipdrop_after_sync', $manifest );
+
+		$message = __( 'Library synced successfully.', 'snipdrop' );
+		if ( $new_count > 0 ) {
+			$message = sprintf(
+				/* translators: %d: Number of new snippets */
+				__( 'Library synced. %d new snippet(s) available!', 'snipdrop' ),
+				$new_count
+			);
+		}
+
 		wp_send_json_success(
 			array(
-				'message'        => __( 'Library synced successfully.', 'snipdrop' ),
+				'message'        => $message,
 				'version'        => $this->library->get_library_version(),
 				'total_snippets' => isset( $manifest['total_snippets'] ) ? $manifest['total_snippets'] : 0,
 				'last_sync'      => gmdate( 'Y-m-d H:i:s' ),
+				'new_count'      => $new_count,
 			)
 		);
 	}
@@ -479,7 +535,7 @@ class SNDP_Admin {
 	/**
 	 * AJAX: Load snippets with pagination.
 	 *
-	 * @since 1.2.0
+	 * @since 1.0.0
 	 */
 	public function ajax_load_snippets() {
 		check_ajax_referer( 'sndp_admin_nonce', 'nonce' );
@@ -506,10 +562,15 @@ class SNDP_Admin {
 		$enabled_ids    = SNDP_Snippets::instance()->get_enabled_snippets();
 		$error_snippets = SNDP_Snippets::instance()->get_error_snippets();
 
+		$seven_days_ago = gmdate( 'Y-m-d', strtotime( '-7 days' ) );
+
 		foreach ( $result['snippets'] as &$snippet ) {
 			$snippet['is_enabled'] = in_array( $snippet['id'], $enabled_ids, true );
 			$snippet['has_error']  = isset( $error_snippets[ $snippet['id'] ] );
 			$snippet['error_msg']  = $snippet['has_error'] ? $error_snippets[ $snippet['id'] ] : null;
+
+			$added_date        = isset( $snippet['added'] ) ? $snippet['added'] : '';
+			$snippet['is_new'] = ( '' !== $added_date && $added_date >= $seven_days_ago );
 		}
 
 		wp_send_json_success( $result );
@@ -522,6 +583,10 @@ class SNDP_Admin {
 	 */
 	public function ajax_dismiss_notice() {
 		check_ajax_referer( 'sndp_admin_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Permission denied.', 'snipdrop' ) ) );
+		}
 
 		$notice_id = isset( $_POST['notice_id'] ) ? sanitize_text_field( wp_unslash( $_POST['notice_id'] ) ) : '';
 
@@ -575,7 +640,7 @@ class SNDP_Admin {
 	/**
 	 * Render custom snippets page.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function render_custom_snippets_page() {
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -590,7 +655,7 @@ class SNDP_Admin {
 	/**
 	 * Render add snippet page.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function render_add_snippet_page() {
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -611,7 +676,7 @@ class SNDP_Admin {
 	/**
 	 * AJAX: Get snippet settings for configuration.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function ajax_get_snippet_settings() {
 		check_ajax_referer( 'sndp_admin_nonce', 'nonce' );
@@ -646,7 +711,7 @@ class SNDP_Admin {
 	/**
 	 * AJAX: Save snippet configuration.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function ajax_save_snippet_config() {
 		check_ajax_referer( 'sndp_admin_nonce', 'nonce' );
@@ -671,7 +736,7 @@ class SNDP_Admin {
 	/**
 	 * AJAX: Copy library snippet to custom snippets.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function ajax_copy_to_custom() {
 		check_ajax_referer( 'sndp_admin_nonce', 'nonce' );
@@ -704,7 +769,7 @@ class SNDP_Admin {
 	/**
 	 * AJAX: Save custom snippet.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function ajax_save_custom_snippet() {
 		check_ajax_referer( 'sndp_admin_nonce', 'nonce' );
@@ -775,7 +840,7 @@ class SNDP_Admin {
 	/**
 	 * AJAX: Delete custom snippet.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function ajax_delete_custom_snippet() {
 		check_ajax_referer( 'sndp_admin_nonce', 'nonce' );
@@ -797,7 +862,7 @@ class SNDP_Admin {
 	/**
 	 * AJAX: Toggle custom snippet.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function ajax_toggle_custom_snippet() {
 		check_ajax_referer( 'sndp_admin_nonce', 'nonce' );
@@ -830,7 +895,7 @@ class SNDP_Admin {
 	/**
 	 * AJAX: Duplicate custom snippet.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function ajax_duplicate_custom_snippet() {
 		check_ajax_referer( 'sndp_admin_nonce', 'nonce' );
@@ -861,7 +926,7 @@ class SNDP_Admin {
 	/**
 	 * AJAX: Get custom snippet data.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function ajax_get_custom_snippet() {
 		check_ajax_referer( 'sndp_admin_nonce', 'nonce' );
@@ -882,5 +947,337 @@ class SNDP_Admin {
 		}
 
 		wp_send_json_success( array( 'snippet' => $snippet ) );
+	}
+
+	/**
+	 * AJAX: Search posts and pages for the page picker.
+	 *
+	 * @since 1.0.0
+	 */
+	public function ajax_search_posts() {
+		check_ajax_referer( 'sndp_admin_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Permission denied.', 'snipdrop' ) ) );
+		}
+
+		$search = isset( $_POST['search'] ) ? sanitize_text_field( wp_unslash( $_POST['search'] ) ) : '';
+		if ( strlen( $search ) < 2 ) {
+			wp_send_json_success( array( 'results' => array() ) );
+		}
+
+		$query = new \WP_Query(
+			array(
+				's'              => $search,
+				'post_type'      => get_post_types( array( 'public' => true ), 'names' ),
+				'post_status'    => 'publish',
+				'posts_per_page' => 10,
+				'orderby'        => 'relevance',
+				'no_found_rows'  => true,
+			)
+		);
+
+		$results = array();
+		foreach ( $query->posts as $post ) {
+			$type_obj  = get_post_type_object( $post->post_type );
+			$results[] = array(
+				'id'        => $post->ID,
+				'title'     => $post->post_title,
+				'post_type' => $type_obj ? $type_obj->labels->singular_name : $post->post_type,
+			);
+		}
+
+		wp_send_json_success( array( 'results' => $results ) );
+	}
+
+	/**
+	 * AJAX: Restore a snippet to a previous revision.
+	 *
+	 * @since 1.0.0
+	 */
+	public function ajax_restore_revision() {
+		check_ajax_referer( 'sndp_admin_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Permission denied.', 'snipdrop' ) ) );
+		}
+
+		$snippet_id     = isset( $_POST['snippet_id'] ) ? sanitize_key( wp_unslash( $_POST['snippet_id'] ) ) : '';
+		$revision_index = isset( $_POST['revision_index'] ) ? absint( $_POST['revision_index'] ) : 0;
+
+		if ( empty( $snippet_id ) ) {
+			wp_send_json_error( array( 'message' => __( 'Invalid snippet ID.', 'snipdrop' ) ) );
+		}
+
+		$result = $this->custom_snippets->restore_revision( $snippet_id, $revision_index );
+
+		if ( ! $result ) {
+			wp_send_json_error( array( 'message' => __( 'Could not restore revision.', 'snipdrop' ) ) );
+		}
+
+		wp_send_json_success( array( 'message' => __( 'Revision restored. Reload to see the updated code.', 'snipdrop' ) ) );
+	}
+
+	/**
+	 * Add SnipDrop item to the admin bar.
+	 *
+	 * @since 1.0.0
+	 * @param WP_Admin_Bar $wp_admin_bar Admin bar instance.
+	 */
+	public function admin_bar_menu( $wp_admin_bar ) {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		$active_custom  = count( $this->custom_snippets->get_active() );
+		$active_library = count( $this->snippets->get_enabled_snippets() );
+		$total_active   = $active_custom + $active_library;
+
+		$wp_admin_bar->add_node(
+			array(
+				'id'    => 'snipdrop',
+				'title' => '<span class="ab-icon dashicons dashicons-editor-code"></span> '
+					. sprintf(
+						/* translators: %d: active snippet count */
+						__( 'SnipDrop (%d)', 'snipdrop' ),
+						$total_active
+					),
+				'href'  => admin_url( 'admin.php?page=snipdrop' ),
+			)
+		);
+
+		$wp_admin_bar->add_node(
+			array(
+				'id'     => 'snipdrop-library',
+				'parent' => 'snipdrop',
+				'title'  => __( 'Library', 'snipdrop' ),
+				'href'   => admin_url( 'admin.php?page=snipdrop' ),
+			)
+		);
+
+		$wp_admin_bar->add_node(
+			array(
+				'id'     => 'snipdrop-my-snippets',
+				'parent' => 'snipdrop',
+				'title'  => __( 'My Snippets', 'snipdrop' ),
+				'href'   => admin_url( 'admin.php?page=snipdrop-custom' ),
+			)
+		);
+
+		$wp_admin_bar->add_node(
+			array(
+				'id'     => 'snipdrop-add-new',
+				'parent' => 'snipdrop',
+				'title'  => __( 'Add New', 'snipdrop' ),
+				'href'   => admin_url( 'admin.php?page=snipdrop-add' ),
+			)
+		);
+
+		$wp_admin_bar->add_node(
+			array(
+				'id'     => 'snipdrop-settings',
+				'parent' => 'snipdrop',
+				'title'  => __( 'Settings', 'snipdrop' ),
+				'href'   => admin_url( 'admin.php?page=snipdrop-settings' ),
+			)
+		);
+
+		if ( $this->snippets->is_safe_mode() ) {
+			$wp_admin_bar->add_node(
+				array(
+					'id'     => 'snipdrop-safe-mode',
+					'parent' => 'snipdrop',
+					'title'  => '<span style="color: #dba617;">' . __( 'Safe Mode Active', 'snipdrop' ) . '</span>',
+					'href'   => admin_url( 'admin.php?page=snipdrop-settings' ),
+				)
+			);
+		}
+	}
+
+	/**
+	 * AJAX: Perform bulk action on custom snippets.
+	 *
+	 * @since 1.0.0
+	 */
+	public function ajax_bulk_action() {
+		check_ajax_referer( 'sndp_admin_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Permission denied.', 'snipdrop' ) ) );
+		}
+
+		$action      = isset( $_POST['bulk_action'] ) ? sanitize_text_field( wp_unslash( $_POST['bulk_action'] ) ) : '';
+		$snippet_ids = isset( $_POST['snippet_ids'] ) ? array_map( 'sanitize_key', wp_unslash( $_POST['snippet_ids'] ) ) : array();
+
+		if ( empty( $action ) || empty( $snippet_ids ) ) {
+			wp_send_json_error( array( 'message' => __( 'No action or snippets selected.', 'snipdrop' ) ) );
+		}
+
+		$processed = 0;
+
+		foreach ( $snippet_ids as $snippet_id ) {
+			switch ( $action ) {
+				case 'activate':
+					if ( $this->custom_snippets->activate( $snippet_id ) ) {
+						++$processed;
+					}
+					break;
+
+				case 'deactivate':
+					if ( $this->custom_snippets->deactivate( $snippet_id ) ) {
+						++$processed;
+					}
+					break;
+
+				case 'delete':
+					if ( $this->custom_snippets->delete( $snippet_id ) ) {
+						++$processed;
+					}
+					break;
+			}
+		}
+
+		wp_send_json_success(
+			array(
+				'message'   => sprintf(
+					/* translators: %d: Number of snippets processed */
+					__( '%d snippet(s) updated.', 'snipdrop' ),
+					$processed
+				),
+				'processed' => $processed,
+			)
+		);
+	}
+
+	/**
+	 * Get count of new snippets added in the last 7 days.
+	 *
+	 * @since 1.0.0
+	 * @return int
+	 */
+	private function get_new_snippet_count() {
+		$cached = get_transient( 'sndp_new_snippet_count' );
+		if ( false !== $cached ) {
+			return (int) $cached;
+		}
+
+		$manifest = $this->library->get_manifest();
+		if ( is_wp_error( $manifest ) || empty( $manifest['snippets'] ) ) {
+			return 0;
+		}
+
+		$seven_days_ago = gmdate( 'Y-m-d', strtotime( '-7 days' ) );
+		$count          = 0;
+
+		foreach ( $manifest['snippets'] as $snippet ) {
+			$added = isset( $snippet['added'] ) ? $snippet['added'] : '';
+			if ( '' !== $added && $added >= $seven_days_ago ) {
+				++$count;
+			}
+		}
+
+		set_transient( 'sndp_new_snippet_count', $count, HOUR_IN_SECONDS );
+
+		return $count;
+	}
+
+	/**
+	 * Handle export snippets as JSON download.
+	 *
+	 * @since 1.0.0
+	 */
+	public function handle_export_snippets() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Permission denied.', 'snipdrop' ), 403 );
+		}
+
+		check_admin_referer( 'sndp_export_snippets', 'sndp_export_nonce' );
+
+		$snippet_ids = array();
+		if ( ! empty( $_GET['ids'] ) ) {
+			$snippet_ids = array_map( 'sanitize_key', explode( ',', sanitize_text_field( wp_unslash( $_GET['ids'] ) ) ) );
+		}
+
+		$export_data = $this->custom_snippets->export( $snippet_ids );
+
+		$filename = 'snipdrop-snippets-' . gmdate( 'Y-m-d' ) . '.json';
+
+		nocache_headers();
+		header( 'Content-Type: application/json; charset=utf-8' );
+		header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
+		header( 'Expires: 0' );
+
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON file download.
+		echo wp_json_encode( $export_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE );
+		exit;
+	}
+
+	/**
+	 * AJAX: Import snippets from uploaded JSON file.
+	 *
+	 * @since 1.0.0
+	 */
+	public function ajax_import_snippets() {
+		check_ajax_referer( 'sndp_admin_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Permission denied.', 'snipdrop' ) ) );
+		}
+
+		if ( empty( $_FILES['import_file'] ) ) {
+			wp_send_json_error( array( 'message' => __( 'No file uploaded.', 'snipdrop' ) ) );
+		}
+
+		$file = $_FILES['import_file']; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- File upload handled below.
+
+		// Validate file type.
+		$filetype = wp_check_filetype( $file['name'], array( 'json' => 'application/json' ) );
+		if ( 'json' !== $filetype['ext'] ) {
+			wp_send_json_error( array( 'message' => __( 'Invalid file type. Please upload a JSON file.', 'snipdrop' ) ) );
+		}
+
+		// Validate file size (max 2MB).
+		if ( $file['size'] > 2 * MB_IN_BYTES ) {
+			wp_send_json_error( array( 'message' => __( 'File is too large. Maximum size is 2MB.', 'snipdrop' ) ) );
+		}
+
+		// Read and parse file.
+		global $wp_filesystem;
+
+		if ( ! function_exists( 'WP_Filesystem' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+		}
+
+		if ( ! WP_Filesystem() ) {
+			wp_send_json_error( array( 'message' => __( 'Unable to access the filesystem.', 'snipdrop' ) ) );
+		}
+
+		$content = $wp_filesystem->get_contents( $file['tmp_name'] );
+		if ( empty( $content ) ) {
+			wp_send_json_error( array( 'message' => __( 'The file is empty.', 'snipdrop' ) ) );
+		}
+
+		$data = json_decode( $content, true );
+		if ( null === $data ) {
+			wp_send_json_error( array( 'message' => __( 'Invalid JSON file. Please check the file format.', 'snipdrop' ) ) );
+		}
+
+		$result = $this->custom_snippets->import( $data );
+
+		if ( is_wp_error( $result ) ) {
+			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
+		}
+
+		wp_send_json_success(
+			array(
+				'message'  => sprintf(
+					/* translators: %d: Number of imported snippets */
+					__( 'Successfully imported %d snippet(s). All imported snippets are set to inactive for safety.', 'snipdrop' ),
+					$result['imported']
+				),
+				'imported' => $result['imported'],
+				'skipped'  => $result['skipped'],
+			)
+		);
 	}
 }

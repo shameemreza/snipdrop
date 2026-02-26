@@ -11,7 +11,7 @@
  * Plugin Name:       SnipDrop
  * Plugin URI:        https://github.com/shameemreza/snipdrop
  * Description:       Ready-to-use code snippets for WordPress and WooCommerce. Just enable and go - no coding required.
- * Version:           1.1.0
+ * Version:           1.0.0
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Shameem Reza
@@ -28,7 +28,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define plugin constants.
-define( 'SNDP_VERSION', '1.1.0' );
+define( 'SNDP_VERSION', '1.0.0' );
 define( 'SNDP_PLUGIN_FILE', __FILE__ );
 define( 'SNDP_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SNDP_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -168,9 +168,6 @@ final class SnipDrop {
 
 		// Set activation transient for welcome notice.
 		set_transient( 'sndp_activated', true, 30 );
-
-		// Flush rewrite rules.
-		flush_rewrite_rules();
 	}
 
 	/**
@@ -179,8 +176,8 @@ final class SnipDrop {
 	 * @since 1.0.0
 	 */
 	public function deactivate() {
-		// Flush rewrite rules.
-		flush_rewrite_rules();
+		// Clean up scheduled events.
+		wp_clear_scheduled_hook( 'sndp_scheduled_sync' );
 	}
 }
 

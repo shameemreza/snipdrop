@@ -87,9 +87,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 		<!-- Main: Snippets List -->
 		<div class="sndp-main">
-			<!-- Search Bar -->
+			<!-- Search Bar and View Toggle -->
 			<div class="sndp-search-bar">
 				<input type="search" id="sndp-search-input" class="sndp-search-input" placeholder="<?php esc_attr_e( 'Search snippets...', 'snipdrop' ); ?>">
+				<div class="sndp-view-toggle">
+					<button type="button" class="sndp-view-btn active" data-view="grid" title="<?php esc_attr_e( 'Grid view', 'snipdrop' ); ?>">
+						<span class="dashicons dashicons-grid-view"></span>
+					</button>
+					<button type="button" class="sndp-view-btn" data-view="list" title="<?php esc_attr_e( 'List view', 'snipdrop' ); ?>">
+						<span class="dashicons dashicons-list-view"></span>
+					</button>
+				</div>
 			</div>
 
 			<!-- Results Info -->
@@ -113,9 +121,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 <!-- Snippet Card Template -->
 <script type="text/html" id="tmpl-sndp-snippet-card">
-	<div class="sndp-snippet-card {{ data.is_enabled ? 'enabled' : '' }} {{ data.has_error ? 'has-error' : '' }}" data-snippet-id="{{ data.id }}" data-requires="{{ JSON.stringify(data.requires || []) }}">
+	<div class="sndp-snippet-card {{ data.is_enabled ? 'enabled' : '' }} {{ data.has_error ? 'has-error' : '' }} {{ data.is_new ? 'is-new' : '' }}" data-snippet-id="{{ data.id }}" data-requires="{{ JSON.stringify(data.requires || []) }}">
 		<div class="sndp-snippet-header">
-			<h4 class="sndp-snippet-title">{{ data.title }}</h4>
+			<h4 class="sndp-snippet-title">
+				{{ data.title }}
+				<# if ( data.is_new ) { #>
+					<span class="sndp-badge-new"><?php esc_html_e( 'New', 'snipdrop' ); ?></span>
+				<# } #>
+				<# if ( data.popular ) { #>
+					<span class="sndp-badge-popular"><?php esc_html_e( 'Popular', 'snipdrop' ); ?></span>
+				<# } #>
+			</h4>
 			<label class="sndp-toggle">
 				<input type="checkbox" class="sndp-toggle-input" {{ data.is_enabled ? 'checked' : '' }} {{ data.has_error ? 'disabled' : '' }}>
 				<span class="sndp-toggle-slider"></span>

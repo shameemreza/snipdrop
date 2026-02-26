@@ -13,7 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Plugin constants.
-define( 'SNDP_VERSION', '1.1.0' );
+define( 'SNDP_VERSION', '1.0.0' );
 define( 'SNDP_PLUGIN_FILE', '/path/to/snipdrop.php' );
 define( 'SNDP_PLUGIN_DIR', '/path/to/snipdrop/' );
 define( 'SNDP_PLUGIN_URL', 'https://example.com/wp-content/plugins/snipdrop/' );
