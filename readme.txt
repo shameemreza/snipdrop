@@ -1,6 +1,6 @@
 === SnipDrop ===
 Contributors: shameemreza
-Tags: code snippets, woocommerce, php snippets, functions, customization
+Tags: code snippets, woocommerce, php snippets, wpcode, customization
 Requires at least: 6.0
 Tested up to: 6.9
 Stable tag: 1.0.0
@@ -16,7 +16,7 @@ Add tested code snippets to your WordPress and WooCommerce site with one click. 
 
 SnipDrop takes a different approach to code snippets. Instead of asking you to write or paste code, it provides a library of pre-tested snippets that you simply enable with a toggle.
 
-Every snippet in SnipDrop has been tested and verified to work. You do not need to copy code from blog posts, paste it into your functions.php, and hope it works. Just find the snippet you need, enable it, and you are done.
+Every snippet in SnipDrop has been tested and verified to work. You do not need to copy code from blog posts, paste it into your `functions.php`, and hope it works. Just find the snippet you need, enable it, and you are done.
 
 = Who is SnipDrop for? =
 
@@ -34,22 +34,52 @@ That is it. The snippet runs immediately. No page refresh needed, no code editin
 
 = Key Features =
 
-* Pre-tested snippets that work out of the box.
-* One-click enable and disable for each snippet.
-* Configurable snippets with custom settings for things like button text, IDs, and more.
-* Custom code snippets with full PHP, JS, CSS, and HTML support.
-* Copy library snippets to My Snippets for customization.
-* Automatic error detection that disables problematic snippets.
-* Safe mode with recovery URL if something goes wrong.
-* Organized by category for easy browsing.
-* Regular library updates with new snippets.
+* **Curated Library:** Pre-tested snippets that work out of the box.
+* **One-Click Toggle:** Enable and disable snippets instantly.
+* **Configurable Snippets:** Change settings like button text or IDs without touching code.
+* **Custom Code Editor:** Full PHP, JS, CSS, and HTML support with syntax highlighting.
+* **Editor Dark Mode:** Toggle dark mode in the code editor for comfortable coding.
+* **Copy to My Snippets:** Copy any library snippet and customize it to fit your needs.
+* **Import & Export:** Move snippets between sites with JSON export/import. Also imports from WPCode and Code Snippets.
+* **Code Auto-Detection:** Paste code and the editor automatically detects PHP, JS, CSS, or HTML.
+* **Snippet Revisions:** Previous versions of your custom snippets are saved automatically.
+* **Search & Bulk Actions:** Search My Snippets and manage multiple snippets at once.
+* **Grid & List View:** Toggle between grid and list view on the library page.
+* **Admin Bar Quick Access:** See active snippet count and quick links from the WordPress admin bar.
+* **Keyboard Shortcut:** Save snippets with Ctrl+S / Cmd+S.
+* **Developer Hooks:** Actions and filters for extending SnipDrop programmatically.
+
+= Conditional Execution =
+
+Control exactly where and when your snippets run:
+
+* **Run Location:** Everywhere, frontend only, admin only, or auto-insert into header, footer, before/after content.
+* **Shortcode Support:** Place snippets anywhere with the `[snipdrop]` shortcode.
+* **User Condition:** Run for all users, logged-in only, or logged-out only.
+* **Schedule:** Set start and end dates to run snippets only within a specific time window.
+* **Post Types:** Restrict to specific post types (posts, pages, products, etc.).
+* **Specific Posts/Pages:** Target individual posts or pages by searching and selecting them.
+* **URL Patterns:** Match URL paths with wildcard patterns (e.g., `/shop/*`, `/checkout`).
+* **Taxonomy Terms:** Run only on posts in specific categories, tags, or custom taxonomy terms.
+
+= Error Protection =
+
+* **Automatic Error Detection:** Snippets that cause PHP errors are disabled automatically.
+* **Safe Mode:** Disable all snippets at once if something goes wrong.
+* **Recovery URL:** A secret URL that enables safe mode even if you cannot access the admin.
+* **Suspicious Code Detection:** Warns about potentially dangerous code patterns before saving.
+* **File-Based Error Logging:** Errors are logged with timestamps and line numbers.
+
+= Custom Capabilities =
+
+SnipDrop uses a custom `sndp_manage_snippets` capability. Administrators get it automatically, and you can grant it to other roles (e.g., Editor) using any capability manager plugin; without giving them full `manage_options` access.
 
 = Snippet Categories =
 
-* WooCommerce Checkout - Customize buttons, fields, and checkout flow.
-* WooCommerce Cart - Modify cart behavior and appearance.
-* WooCommerce Products - Change product display and pricing.
-* WordPress Admin - Customize the admin dashboard.
+* WooCommerce Checkout: Customize buttons, fields, and checkout flow.
+* WooCommerce Cart: Modify cart behavior and appearance.
+* WooCommerce Products: Change product display and pricing.
+* WordPress Admin: Customize the admin dashboard.
 * More categories added regularly.
 
 = Configurable Snippets =
@@ -61,12 +91,6 @@ Some snippets include configurable options. Instead of editing code, you simply 
 For developers and advanced users, SnipDrop includes a full code editor to create your own snippets. Write PHP, JavaScript, CSS, or HTML code with syntax highlighting and save it alongside the curated library.
 
 You can also copy any library snippet to My Snippets and customize the code to fit your specific needs.
-
-= Error Protection =
-
-SnipDrop includes automatic error protection. If a snippet causes a PHP error, it gets disabled automatically to prevent your site from breaking. You will see a notice explaining what happened and can investigate or re-enable the snippet after fixing the issue.
-
-If your site becomes inaccessible, use the recovery URL (found in Settings) to enter safe mode and disable all snippets.
 
 = Source Attribution =
 
@@ -90,7 +114,7 @@ For advanced users, the My Snippets feature provides a full code editor to creat
 
 = What happens if a snippet breaks my site? =
 
-SnipDrop automatically detects PHP errors. If a snippet causes a fatal error, it gets disabled immediately to protect your site. You can also use the recovery URL to enter safe mode and disable all snippets at once.
+SnipDrop automatically detects PHP errors. If a snippet causes a fatal error, it gets disabled immediately to protect your site. You can also use the recovery URL (found in Settings) to enter safe mode and disable all snippets at once.
 
 = Will snippets survive theme updates? =
 
@@ -102,11 +126,31 @@ Yes. For configurable snippets, you can change settings like text values and IDs
 
 = Can I add my own custom code? =
 
-Yes. Go to SnipDrop > Add New to create custom PHP, JavaScript, CSS, or HTML snippets with a full code editor.
+Yes. Go to SnipDrop > Add New to create custom PHP, JavaScript, CSS, or HTML snippets with a full code editor. You get syntax highlighting, dark mode, and all the conditional execution options.
+
+= Can I schedule a snippet to run only during a specific period? =
+
+Yes. Each snippet has a Schedule option where you can set a start date and end date. The snippet will only execute within that time window. Uses your site's configured timezone.
+
+= Can I restrict a snippet to specific pages or URLs? =
+
+Yes. You can target snippets by post type, specific post/page IDs, URL patterns with wildcards (e.g., `/shop/*`), or taxonomy terms (categories, tags, product categories).
+
+= Can I import snippets from other plugins? =
+
+Yes. SnipDrop can import from its own JSON format, as well as from WPCode and Code Snippets export files. Go to My Snippets and click Import.
+
+= Can I export my snippets? =
+
+Yes. Go to My Snippets and click Export to download all or selected snippets as a JSON file.
+
+= Can I give editors access to snippets without making them administrators? =
+
+Yes. SnipDrop uses a custom capability (`sndp_manage_snippets`). Use any capability manager plugin to grant this capability to the Editor role or any other role.
 
 = How often are new snippets added? =
 
-The snippet library is updated regularly. Click Sync Library in the plugin to check for new additions.
+The snippet library is updated regularly. Click Sync Library in the plugin to check for new additions. You will also see a notification badge when new snippets are available.
 
 = Does SnipDrop work with page builders? =
 
@@ -116,32 +160,50 @@ Yes. SnipDrop works at the WordPress level, so it is compatible with Elementor, 
 
 Yes. SnipDrop works with WP Super Cache, W3 Total Cache, LiteSpeed Cache, WP Rocket, FlyingPress and other caching solutions. You may need to clear your cache after enabling or disabling snippets.
 
+= Does SnipDrop slow down my site? =
+
+No. SnipDrop only loads active snippets and uses WordPress's built-in hook system. There are no additional database queries on the frontend beyond reading the stored options.
+
 == Screenshots ==
 
-1. Snippet library with category filtering and toggle controls.
+1. Snippet library with category filtering, search, and toggle controls.
 2. Configurable snippet settings modal.
-3. My Snippets page with custom code management.
-4. Add New snippet page with code editor.
-5. Settings page with safe mode and recovery URL.
+3. My Snippets page with search, bulk actions, and grid/list view toggle.
+4. Add New snippet page with code editor, dark mode, and conditional options.
+5. Settings page with safe mode, admin bypass, error handling, and recovery URL.
 
 == Changelog ==
 
 = 1.0.0 =
 * Initial release.
-* Curated snippet library with categories and search.
+* Curated snippet library with categories, search, and pagination.
 * One-click enable and disable for each snippet.
+* Grid and list view toggle for the library.
 * Configurable snippets with custom settings (no code editing needed).
 * My Snippets for custom PHP, JS, CSS, and HTML code management.
-* Full code editor with syntax highlighting.
+* Full code editor with syntax highlighting and dark mode toggle.
+* Code type auto-detection on paste.
 * Copy library snippets to My Snippets for customization.
+* Import and export snippets (JSON format, plus WPCode and Code Snippets import).
 * Auto-insert locations: header, footer, before/after content, frontend, admin.
 * Shortcode support for custom snippets.
-* Conditional execution by user state, post type, and page ID.
-* Automatic error detection and snippet disabling.
+* Conditional execution by user state, post type, page ID, URL patterns, and taxonomy terms.
+* Date/time scheduling with start and end dates.
+* Custom `sndp_manage_snippets` capability for role-based access.
+* Admin bypass setting to disable frontend snippets for administrators.
+* Automatic error detection with configurable auto-disable.
 * Safe mode with recovery URL.
-* GitHub-based library sync.
-* Suspicious code pattern detection.
+* Suspicious code pattern detection with warnings.
 * File-based error logging with error history.
+* Snippet revisions with one-click restore.
+* Search, bulk actions, and duplicate for My Snippets.
+* Admin bar quick access with active snippet count.
+* Keyboard shortcut (Ctrl+S / Cmd+S) to save snippets.
+* New snippet notification badges.
+* Developer hooks (actions and filters) for extensibility.
+* Toast notifications for save/delete/toggle feedback.
+* Inline help tooltips throughout the interface.
+* GitHub-based library sync.
 
 == Third-Party Services ==
 

@@ -256,6 +256,14 @@ class SNDP_Executor {
 	 * @return bool
 	 */
 	private function should_run_custom_snippet( $snippet ) {
+		if ( $this->is_admin_bypass_active() ) {
+			return false;
+		}
+
+		if ( ! $this->check_schedule_condition( $snippet ) ) {
+			return false;
+		}
+
 		$location = isset( $snippet['location'] ) ? $snippet['location'] : 'everywhere';
 
 		// Auto-insert locations are handled by their own hooks.
@@ -287,13 +295,19 @@ class SNDP_Executor {
 
 		// Frontend-only checks.
 		if ( ! is_admin() ) {
-			// Check post types (only on frontend and after query is set).
 			if ( ! $this->check_post_type_condition( $snippet ) ) {
 				return false;
 			}
 
-			// Check specific page IDs.
 			if ( ! $this->check_page_id_condition( $snippet ) ) {
+				return false;
+			}
+
+			if ( ! $this->check_url_pattern_condition( $snippet ) ) {
+				return false;
+			}
+
+			if ( ! $this->check_taxonomy_condition( $snippet ) ) {
 				return false;
 			}
 		}
@@ -309,6 +323,14 @@ class SNDP_Executor {
 	 * @return bool
 	 */
 	private function should_run_auto_insert( $snippet ) {
+		if ( $this->is_admin_bypass_active() ) {
+			return false;
+		}
+
+		if ( ! $this->check_schedule_condition( $snippet ) ) {
+			return false;
+		}
+
 		// Check safe mode.
 		if ( $this->snippets->is_safe_mode() ) {
 			return false;
@@ -326,6 +348,14 @@ class SNDP_Executor {
 
 		// Check page ID condition.
 		if ( ! $this->check_page_id_condition( $snippet ) ) {
+			return false;
+		}
+
+		if ( ! $this->check_url_pattern_condition( $snippet ) ) {
+			return false;
+		}
+
+		if ( ! $this->check_taxonomy_condition( $snippet ) ) {
 			return false;
 		}
 
@@ -559,6 +589,70 @@ class SNDP_Executor {
 	}
 
 	/**
+	 * Check if the snippet is within its scheduled date/time window.
+	 *
+	 * Uses the site's configured timezone via wp_timezone().
+	 *
+	 * @since 1.0.0
+	 * @param array $snippet Snippet data.
+	 * @return bool
+	 */
+	private function check_schedule_condition( $snippet ) {
+		$start = isset( $snippet['schedule_start'] ) ? trim( $snippet['schedule_start'] ) : '';
+		$end   = isset( $snippet['schedule_end'] ) ? trim( $snippet['schedule_end'] ) : '';
+
+		if ( '' === $start && '' === $end ) {
+			return true;
+		}
+
+		$tz  = wp_timezone();
+		$now = new \DateTime( 'now', $tz );
+
+		if ( '' !== $start ) {
+			try {
+				$start_dt = new \DateTime( $start, $tz );
+				if ( $now < $start_dt ) {
+					return false;
+				}
+			} catch ( \Exception $e ) { // phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch
+				unset( $e );
+			}
+		}
+
+		if ( '' !== $end ) {
+			try {
+				$end_dt = new \DateTime( $end, $tz );
+				if ( $now > $end_dt ) {
+					return false;
+				}
+			} catch ( \Exception $e ) { // phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch
+				unset( $e );
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Check if frontend snippets should be bypassed for the current admin user.
+	 *
+	 * @since 1.0.0
+	 * @return bool True if snippets should be skipped.
+	 */
+	private function is_admin_bypass_active() {
+		if ( is_admin() ) {
+			return false;
+		}
+
+		$settings = get_option( 'sndp_settings', array() );
+		if ( empty( $settings['disable_for_admins'] ) ) {
+			return false;
+		}
+
+		return current_user_can( 'manage_options' );
+	}
+
+	/**
 	 * Check user condition (logged in/out).
 	 *
 	 * @since 1.0.0
@@ -636,6 +730,80 @@ class SNDP_Executor {
 		}
 
 		return in_array( $current_id, $ids, true );
+	}
+
+	/**
+	 * Check URL pattern condition.
+	 *
+	 * Supports wildcard (*) matching against the current request URI.
+	 *
+	 * @since 1.0.0
+	 * @param array $snippet Snippet data.
+	 * @return bool
+	 */
+	private function check_url_pattern_condition( $snippet ) {
+		$patterns = isset( $snippet['url_patterns'] ) ? trim( $snippet['url_patterns'] ) : '';
+
+		if ( empty( $patterns ) ) {
+			return true;
+		}
+
+		$current_path = isset( $_SERVER['REQUEST_URI'] )
+			? wp_parse_url( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ), PHP_URL_PATH )
+			: '/';
+
+		if ( ! $current_path ) {
+			$current_path = '/';
+		}
+
+		$lines = array_filter( array_map( 'trim', explode( "\n", $patterns ) ) );
+
+		foreach ( $lines as $pattern ) {
+			$regex = '#^' . str_replace( '\*', '.*', preg_quote( $pattern, '#' ) ) . '$#i';
+			if ( preg_match( $regex, $current_path ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Check taxonomy/term condition.
+	 *
+	 * Format: array of "taxonomy:slug" strings (e.g., "category:news", "product_cat:clothing").
+	 *
+	 * @since 1.0.0
+	 * @param array $snippet Snippet data.
+	 * @return bool
+	 */
+	private function check_taxonomy_condition( $snippet ) {
+		$taxonomies = isset( $snippet['taxonomies'] ) ? $snippet['taxonomies'] : array();
+
+		if ( empty( $taxonomies ) ) {
+			return true;
+		}
+
+		$current_id = get_queried_object_id();
+		if ( ! $current_id ) {
+			return false;
+		}
+
+		foreach ( $taxonomies as $tax_term ) {
+			$parts = explode( ':', $tax_term, 2 );
+			if ( count( $parts ) !== 2 ) {
+				continue;
+			}
+
+			$taxonomy = $parts[0];
+			$slug     = $parts[1];
+
+			if ( has_term( $slug, $taxonomy, $current_id ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**

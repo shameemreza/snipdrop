@@ -1,4 +1,4 @@
-<?php
+<?php // phpcs:ignore WordPress.Files.FileName.InvalidClassFileName
 /**
  * SnipDrop - Ready-to-Use Code Snippets
  *
@@ -36,6 +36,9 @@ define( 'SNDP_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 
 // Library URL for fetching snippets.
 define( 'SNDP_LIBRARY_URL', 'https://raw.githubusercontent.com/shameemreza/snipdrop-library/main/' );
+
+// Custom capability for managing snippets.
+define( 'SNDP_CAPABILITY', 'sndp_manage_snippets' );
 
 /**
  * Main SnipDrop class.
@@ -108,8 +111,34 @@ final class SnipDrop {
 		// Initialize plugin.
 		add_action( 'plugins_loaded', array( $this, 'init' ), 0 );
 
+		// Map custom capability to manage_options as fallback.
+		add_filter( 'user_has_cap', array( $this, 'map_capability' ), 10, 4 );
+
 		// Add settings link to plugins page.
 		add_filter( 'plugin_action_links_' . SNDP_PLUGIN_BASENAME, array( $this, 'plugin_action_links' ) );
+	}
+
+	/**
+	 * Grant sndp_manage_snippets to any user who has manage_options.
+	 *
+	 * This ensures administrators always have access without requiring
+	 * re-activation, while still allowing the capability to be granted
+	 * independently to other roles (e.g. Editor).
+	 *
+	 * @since 1.0.0
+	 * @param bool[]   $allcaps All capabilities for the user.
+	 * @param string[] $caps    Required primitive capabilities.
+	 * @param array    $args    Arguments: [0] = requested cap, [1] = user ID.
+	 * @param WP_User  $user    The user object.
+	 * @return bool[]
+	 */
+	public function map_capability( $allcaps, $caps, $args, $user ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
+		if ( isset( $args[0] ) && SNDP_CAPABILITY === $args[0] ) {
+			if ( ! empty( $allcaps['manage_options'] ) ) {
+				$allcaps[ SNDP_CAPABILITY ] = true;
+			}
+		}
+		return $allcaps;
 	}
 
 	/**
@@ -166,6 +195,12 @@ final class SnipDrop {
 			add_option( 'sndp_settings', $defaults );
 		}
 
+		// Grant custom capability to administrator role.
+		$admin_role = get_role( 'administrator' );
+		if ( $admin_role ) {
+			$admin_role->add_cap( SNDP_CAPABILITY );
+		}
+
 		// Set activation transient for welcome notice.
 		set_transient( 'sndp_activated', true, 30 );
 	}
@@ -178,6 +213,12 @@ final class SnipDrop {
 	public function deactivate() {
 		// Clean up scheduled events.
 		wp_clear_scheduled_hook( 'sndp_scheduled_sync' );
+
+		// Remove custom capability from administrator role.
+		$admin_role = get_role( 'administrator' );
+		if ( $admin_role ) {
+			$admin_role->remove_cap( SNDP_CAPABILITY );
+		}
 	}
 }
 
@@ -187,7 +228,7 @@ final class SnipDrop {
  * @since 1.0.0
  * @return SnipDrop
  */
-function snipdrop() {
+function snipdrop() { // phpcs:ignore Universal.Files.SeparateFunctionsFromOO.Mixed
 	return SnipDrop::instance();
 }
 

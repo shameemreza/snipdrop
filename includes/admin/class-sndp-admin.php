@@ -127,10 +127,10 @@ class SNDP_Admin {
 		add_menu_page(
 			__( 'SnipDrop', 'snipdrop' ),
 			$menu_label,
-			'manage_options',
+			SNDP_CAPABILITY,
 			'snipdrop',
 			array( $this, 'render_admin_page' ),
-			'dashicons-editor-code',
+			'dashicons-superhero',
 			80
 		);
 
@@ -138,7 +138,7 @@ class SNDP_Admin {
 			'snipdrop',
 			__( 'Library', 'snipdrop' ),
 			__( 'Library', 'snipdrop' ),
-			'manage_options',
+			SNDP_CAPABILITY,
 			'snipdrop',
 			array( $this, 'render_admin_page' )
 		);
@@ -147,7 +147,7 @@ class SNDP_Admin {
 			'snipdrop',
 			__( 'My Snippets', 'snipdrop' ),
 			__( 'My Snippets', 'snipdrop' ),
-			'manage_options',
+			SNDP_CAPABILITY,
 			'snipdrop-custom',
 			array( $this, 'render_custom_snippets_page' )
 		);
@@ -156,7 +156,7 @@ class SNDP_Admin {
 			'snipdrop',
 			__( 'Add New', 'snipdrop' ),
 			__( 'Add New', 'snipdrop' ),
-			'manage_options',
+			SNDP_CAPABILITY,
 			'snipdrop-add',
 			array( $this, 'render_add_snippet_page' )
 		);
@@ -165,7 +165,7 @@ class SNDP_Admin {
 			'snipdrop',
 			__( 'Settings', 'snipdrop' ),
 			__( 'Settings', 'snipdrop' ),
-			'manage_options',
+			SNDP_CAPABILITY,
 			'snipdrop-settings',
 			array( $this, 'render_settings_page' )
 		);
@@ -199,7 +199,7 @@ class SNDP_Admin {
 			SNDP_VERSION
 		);
 
-		// Code editor for custom snippets (editing only).
+		// Code editor and datepicker for custom snippets (editing only).
 		$editor_settings = array();
 		if ( in_array( $hook_suffix, array( 'snipdrop_page_snipdrop-add' ), true ) ) {
 			// WordPress built-in code editor.
@@ -208,6 +208,9 @@ class SNDP_Admin {
 			if ( false !== $settings ) {
 				$editor_settings = $settings;
 			}
+
+			// jQuery UI datepicker for schedule fields.
+			wp_enqueue_script( 'jquery-ui-datepicker' );
 		}
 
 		// Scripts.
@@ -329,7 +332,7 @@ class SNDP_Admin {
 	 */
 	public function render_admin_page() {
 		// Check permissions.
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( SNDP_CAPABILITY ) ) {
 			wp_die( esc_html__( 'You do not have permission to access this page.', 'snipdrop' ) );
 		}
 
@@ -354,7 +357,7 @@ class SNDP_Admin {
 	 */
 	public function render_settings_page() {
 		// Check permissions.
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( SNDP_CAPABILITY ) ) {
 			wp_die( esc_html__( 'You do not have permission to access this page.', 'snipdrop' ) );
 		}
 
@@ -364,6 +367,8 @@ class SNDP_Admin {
 
 			$settings                        = get_option( 'sndp_settings', array() );
 			$settings['safe_mode']           = isset( $_POST['sndp_safe_mode'] );
+			$settings['disable_for_admins']  = isset( $_POST['sndp_disable_for_admins'] );
+			$settings['auto_disable_errors'] = isset( $_POST['sndp_auto_disable_errors'] );
 			$settings['delete_on_uninstall'] = isset( $_POST['sndp_delete_on_uninstall'] );
 			update_option( 'sndp_settings', $settings );
 
@@ -386,7 +391,7 @@ class SNDP_Admin {
 	public function ajax_toggle_snippet() {
 		check_ajax_referer( 'sndp_admin_nonce', 'nonce' );
 
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( SNDP_CAPABILITY ) ) {
 			wp_send_json_error( array( 'message' => __( 'Permission denied.', 'snipdrop' ) ) );
 		}
 
@@ -488,7 +493,7 @@ class SNDP_Admin {
 	public function ajax_sync_library() {
 		check_ajax_referer( 'sndp_admin_nonce', 'nonce' );
 
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( SNDP_CAPABILITY ) ) {
 			wp_send_json_error( array( 'message' => __( 'Permission denied.', 'snipdrop' ) ) );
 		}
 
@@ -540,7 +545,7 @@ class SNDP_Admin {
 	public function ajax_load_snippets() {
 		check_ajax_referer( 'sndp_admin_nonce', 'nonce' );
 
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( SNDP_CAPABILITY ) ) {
 			wp_send_json_error( array( 'message' => __( 'Permission denied.', 'snipdrop' ) ) );
 		}
 
@@ -584,7 +589,7 @@ class SNDP_Admin {
 	public function ajax_dismiss_notice() {
 		check_ajax_referer( 'sndp_admin_nonce', 'nonce' );
 
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( SNDP_CAPABILITY ) ) {
 			wp_send_json_error( array( 'message' => __( 'Permission denied.', 'snipdrop' ) ) );
 		}
 
@@ -606,7 +611,7 @@ class SNDP_Admin {
 	public function ajax_get_snippet_code() {
 		check_ajax_referer( 'sndp_admin_nonce', 'nonce' );
 
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( SNDP_CAPABILITY ) ) {
 			wp_send_json_error( array( 'message' => __( 'Permission denied.', 'snipdrop' ) ) );
 		}
 
@@ -643,7 +648,7 @@ class SNDP_Admin {
 	 * @since 1.0.0
 	 */
 	public function render_custom_snippets_page() {
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( SNDP_CAPABILITY ) ) {
 			wp_die( esc_html__( 'You do not have permission to access this page.', 'snipdrop' ) );
 		}
 
@@ -658,7 +663,7 @@ class SNDP_Admin {
 	 * @since 1.0.0
 	 */
 	public function render_add_snippet_page() {
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( SNDP_CAPABILITY ) ) {
 			wp_die( esc_html__( 'You do not have permission to access this page.', 'snipdrop' ) );
 		}
 
@@ -681,7 +686,7 @@ class SNDP_Admin {
 	public function ajax_get_snippet_settings() {
 		check_ajax_referer( 'sndp_admin_nonce', 'nonce' );
 
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( SNDP_CAPABILITY ) ) {
 			wp_send_json_error( array( 'message' => __( 'Permission denied.', 'snipdrop' ) ) );
 		}
 
@@ -716,7 +721,7 @@ class SNDP_Admin {
 	public function ajax_save_snippet_config() {
 		check_ajax_referer( 'sndp_admin_nonce', 'nonce' );
 
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( SNDP_CAPABILITY ) ) {
 			wp_send_json_error( array( 'message' => __( 'Permission denied.', 'snipdrop' ) ) );
 		}
 
@@ -741,7 +746,7 @@ class SNDP_Admin {
 	public function ajax_copy_to_custom() {
 		check_ajax_referer( 'sndp_admin_nonce', 'nonce' );
 
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( SNDP_CAPABILITY ) ) {
 			wp_send_json_error( array( 'message' => __( 'Permission denied.', 'snipdrop' ) ) );
 		}
 
@@ -774,7 +779,7 @@ class SNDP_Admin {
 	public function ajax_save_custom_snippet() {
 		check_ajax_referer( 'sndp_admin_nonce', 'nonce' );
 
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( SNDP_CAPABILITY ) ) {
 			wp_send_json_error( array( 'message' => __( 'Permission denied.', 'snipdrop' ) ) );
 		}
 
@@ -785,18 +790,24 @@ class SNDP_Admin {
 		}
 
 		$snippet_data = array(
-			'id'          => isset( $_POST['id'] ) ? sanitize_text_field( wp_unslash( $_POST['id'] ) ) : '',
-			'title'       => isset( $_POST['title'] ) ? sanitize_text_field( wp_unslash( $_POST['title'] ) ) : '',
-			'description' => isset( $_POST['description'] ) ? sanitize_textarea_field( wp_unslash( $_POST['description'] ) ) : '',
-			'code'        => isset( $_POST['code'] ) ? wp_unslash( $_POST['code'] ) : '', // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-			'code_type'   => isset( $_POST['code_type'] ) ? sanitize_text_field( wp_unslash( $_POST['code_type'] ) ) : 'php',
-			'status'      => isset( $_POST['status'] ) ? sanitize_text_field( wp_unslash( $_POST['status'] ) ) : 'inactive',
-			'hook'        => isset( $_POST['hook'] ) ? sanitize_text_field( wp_unslash( $_POST['hook'] ) ) : 'init',
-			'priority'    => isset( $_POST['priority'] ) ? absint( $_POST['priority'] ) : 10,
-			'location'    => isset( $_POST['location'] ) ? sanitize_text_field( wp_unslash( $_POST['location'] ) ) : 'everywhere',
-			'user_cond'   => isset( $_POST['user_cond'] ) ? sanitize_text_field( wp_unslash( $_POST['user_cond'] ) ) : 'all',
-			'post_types'  => $post_types,
-			'page_ids'    => isset( $_POST['page_ids'] ) ? sanitize_text_field( wp_unslash( $_POST['page_ids'] ) ) : '',
+			'id'             => isset( $_POST['id'] ) ? sanitize_text_field( wp_unslash( $_POST['id'] ) ) : '',
+			'title'          => isset( $_POST['title'] ) ? sanitize_text_field( wp_unslash( $_POST['title'] ) ) : '',
+			'description'    => isset( $_POST['description'] ) ? sanitize_textarea_field( wp_unslash( $_POST['description'] ) ) : '',
+			'code'           => isset( $_POST['code'] ) ? wp_unslash( $_POST['code'] ) : '', // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+			'code_type'      => isset( $_POST['code_type'] ) ? sanitize_text_field( wp_unslash( $_POST['code_type'] ) ) : 'php',
+			'status'         => isset( $_POST['status'] ) ? sanitize_text_field( wp_unslash( $_POST['status'] ) ) : 'inactive',
+			'hook'           => isset( $_POST['hook'] ) ? sanitize_text_field( wp_unslash( $_POST['hook'] ) ) : 'init',
+			'priority'       => isset( $_POST['priority'] ) ? absint( $_POST['priority'] ) : 10,
+			'location'       => isset( $_POST['location'] ) ? sanitize_text_field( wp_unslash( $_POST['location'] ) ) : 'everywhere',
+			'user_cond'      => isset( $_POST['user_cond'] ) ? sanitize_text_field( wp_unslash( $_POST['user_cond'] ) ) : 'all',
+			'post_types'     => $post_types,
+			'page_ids'       => isset( $_POST['page_ids'] ) ? sanitize_text_field( wp_unslash( $_POST['page_ids'] ) ) : '',
+			'url_patterns'   => isset( $_POST['url_patterns'] ) ? sanitize_textarea_field( wp_unslash( $_POST['url_patterns'] ) ) : '',
+			'taxonomies'     => isset( $_POST['taxonomies'] ) && is_array( $_POST['taxonomies'] )
+				? array_map( 'sanitize_text_field', wp_unslash( $_POST['taxonomies'] ) )
+				: array(),
+			'schedule_start' => isset( $_POST['schedule_start'] ) ? sanitize_text_field( wp_unslash( $_POST['schedule_start'] ) ) : '',
+			'schedule_end'   => isset( $_POST['schedule_end'] ) ? sanitize_text_field( wp_unslash( $_POST['schedule_end'] ) ) : '',
 		);
 
 		// Validate PHP syntax if PHP snippet.
@@ -845,7 +856,7 @@ class SNDP_Admin {
 	public function ajax_delete_custom_snippet() {
 		check_ajax_referer( 'sndp_admin_nonce', 'nonce' );
 
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( SNDP_CAPABILITY ) ) {
 			wp_send_json_error( array( 'message' => __( 'Permission denied.', 'snipdrop' ) ) );
 		}
 
@@ -867,7 +878,7 @@ class SNDP_Admin {
 	public function ajax_toggle_custom_snippet() {
 		check_ajax_referer( 'sndp_admin_nonce', 'nonce' );
 
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( SNDP_CAPABILITY ) ) {
 			wp_send_json_error( array( 'message' => __( 'Permission denied.', 'snipdrop' ) ) );
 		}
 
@@ -900,7 +911,7 @@ class SNDP_Admin {
 	public function ajax_duplicate_custom_snippet() {
 		check_ajax_referer( 'sndp_admin_nonce', 'nonce' );
 
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( SNDP_CAPABILITY ) ) {
 			wp_send_json_error( array( 'message' => __( 'Permission denied.', 'snipdrop' ) ) );
 		}
 
@@ -931,7 +942,7 @@ class SNDP_Admin {
 	public function ajax_get_custom_snippet() {
 		check_ajax_referer( 'sndp_admin_nonce', 'nonce' );
 
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( SNDP_CAPABILITY ) ) {
 			wp_send_json_error( array( 'message' => __( 'Permission denied.', 'snipdrop' ) ) );
 		}
 
@@ -957,7 +968,7 @@ class SNDP_Admin {
 	public function ajax_search_posts() {
 		check_ajax_referer( 'sndp_admin_nonce', 'nonce' );
 
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( SNDP_CAPABILITY ) ) {
 			wp_send_json_error( array( 'message' => __( 'Permission denied.', 'snipdrop' ) ) );
 		}
 
@@ -998,7 +1009,7 @@ class SNDP_Admin {
 	public function ajax_restore_revision() {
 		check_ajax_referer( 'sndp_admin_nonce', 'nonce' );
 
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( SNDP_CAPABILITY ) ) {
 			wp_send_json_error( array( 'message' => __( 'Permission denied.', 'snipdrop' ) ) );
 		}
 
@@ -1025,7 +1036,7 @@ class SNDP_Admin {
 	 * @param WP_Admin_Bar $wp_admin_bar Admin bar instance.
 	 */
 	public function admin_bar_menu( $wp_admin_bar ) {
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( SNDP_CAPABILITY ) ) {
 			return;
 		}
 
@@ -1036,12 +1047,11 @@ class SNDP_Admin {
 		$wp_admin_bar->add_node(
 			array(
 				'id'    => 'snipdrop',
-				'title' => '<span class="ab-icon dashicons dashicons-editor-code"></span> '
-					. sprintf(
-						/* translators: %d: active snippet count */
-						__( 'SnipDrop (%d)', 'snipdrop' ),
-						$total_active
-					),
+				'title' => sprintf(
+					/* translators: %d: active snippet count */
+					__( 'SnipDrop (%d)', 'snipdrop' ),
+					$total_active
+				),
 				'href'  => admin_url( 'admin.php?page=snipdrop' ),
 			)
 		);
@@ -1087,7 +1097,7 @@ class SNDP_Admin {
 				array(
 					'id'     => 'snipdrop-safe-mode',
 					'parent' => 'snipdrop',
-					'title'  => '<span style="color: #dba617;">' . __( 'Safe Mode Active', 'snipdrop' ) . '</span>',
+					'title'  => '<span class="sndp-safe-mode-label">' . __( 'Safe Mode Active', 'snipdrop' ) . '</span>',
 					'href'   => admin_url( 'admin.php?page=snipdrop-settings' ),
 				)
 			);
@@ -1102,7 +1112,7 @@ class SNDP_Admin {
 	public function ajax_bulk_action() {
 		check_ajax_referer( 'sndp_admin_nonce', 'nonce' );
 
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( SNDP_CAPABILITY ) ) {
 			wp_send_json_error( array( 'message' => __( 'Permission denied.', 'snipdrop' ) ) );
 		}
 
@@ -1187,7 +1197,7 @@ class SNDP_Admin {
 	 * @since 1.0.0
 	 */
 	public function handle_export_snippets() {
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( SNDP_CAPABILITY ) ) {
 			wp_die( esc_html__( 'Permission denied.', 'snipdrop' ), 403 );
 		}
 
@@ -1220,7 +1230,7 @@ class SNDP_Admin {
 	public function ajax_import_snippets() {
 		check_ajax_referer( 'sndp_admin_nonce', 'nonce' );
 
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( SNDP_CAPABILITY ) ) {
 			wp_send_json_error( array( 'message' => __( 'Permission denied.', 'snipdrop' ) ) );
 		}
 

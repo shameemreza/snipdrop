@@ -29,7 +29,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<?php esc_html_e( 'Import', 'snipdrop' ); ?>
 	</button>
 
-	<div id="sndp-import-form" class="sndp-import-form" style="display:none;">
+	<div id="sndp-import-form" class="sndp-import-form hidden">
 		<form id="sndp-import-upload" enctype="multipart/form-data">
 			<input type="file" name="import_file" id="sndp-import-file" accept=".json">
 			<button type="submit" class="button button-primary" id="sndp-import-submit" disabled>

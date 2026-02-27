@@ -430,8 +430,77 @@
 				} );
 			}
 
+			// Dark mode toggle.
+			this.initDarkMode();
+
+			this.initDatepickers();
 			this.togglePhpOptions();
 			this.toggleConditionalOptions();
+		},
+
+		/**
+		 * Initialize dark mode toggle for the code editor.
+		 */
+		initDarkMode: function() {
+			var $toggle = $( '#sndp-dark-mode-toggle' );
+			var $field  = $( '.sndp-code-field' );
+
+			if ( ! $toggle.length || ! $field.length ) {
+				return;
+			}
+
+			var isDark = localStorage.getItem( 'sndp_editor_dark' ) === '1';
+
+			if ( isDark ) {
+				$field.addClass( 'sndp-dark-editor' );
+				$toggle.addClass( 'active' );
+				if ( this.editor && this.editor.codemirror ) {
+					this.editor.codemirror.refresh();
+				}
+			}
+
+			$toggle.on( 'click', function() {
+				isDark = ! isDark;
+				$field.toggleClass( 'sndp-dark-editor', isDark );
+				$toggle.toggleClass( 'active', isDark );
+				localStorage.setItem( 'sndp_editor_dark', isDark ? '1' : '0' );
+
+				if ( SNDP_Admin.editor && SNDP_Admin.editor.codemirror ) {
+					SNDP_Admin.editor.codemirror.refresh();
+				}
+			} );
+		},
+
+		/**
+		 * Initialize jQuery UI datepickers for schedule fields.
+		 */
+		initDatepickers: function() {
+			if ( ! $.fn.datepicker ) {
+				return;
+			}
+
+			$( '.sndp-datepicker' ).datepicker( {
+				dateFormat: 'yy-mm-dd',
+				changeMonth: true,
+				changeYear: true,
+				beforeShow: function( input, inst ) {
+					inst.dpDiv.addClass( 'sndp-datepicker-popup' );
+				}
+			} );
+		},
+
+		/**
+		 * Combine separate date and time inputs into a single datetime-local value.
+		 */
+		getScheduleValue: function( which ) {
+			var date = $( '#sndp-schedule-' + which + '-date' ).val();
+			var time = $( '#sndp-schedule-' + which + '-time' ).val();
+
+			if ( ! date ) {
+				return '';
+			}
+
+			return time ? date + 'T' + time : date + 'T00:00';
 		},
 
 		detectCodeType: function( code ) {
@@ -488,9 +557,9 @@
 
 			// Show/hide shortcode hint.
 			if ( 'shortcode' === location && snippetId ) {
-				$shortcodeHint.show();
+				$shortcodeHint.removeClass( 'hidden' );
 			} else {
-				$shortcodeHint.hide();
+				$shortcodeHint.addClass( 'hidden' );
 			}
 		},
 
@@ -1126,6 +1195,12 @@
 				postTypes.push( $( this ).val() );
 			} );
 
+			// Get selected taxonomies.
+			var taxonomies = [];
+			$( '.sndp-taxonomy-checklist input[name="taxonomies[]"]:checked' ).each( function() {
+				taxonomies.push( $( this ).val() );
+			} );
+
 			$submitBtn.prop( 'disabled', true ).text( sndp_admin.strings.saving );
 
 			$.ajax( {
@@ -1145,7 +1220,11 @@
 					location: $( '#sndp-snippet-location' ).val(),
 					user_cond: $( '#sndp-snippet-user-cond' ).val(),
 					'post_types[]': postTypes,
-					page_ids: $( '#sndp-snippet-page-ids' ).val()
+					page_ids: $( '#sndp-snippet-page-ids' ).val(),
+					url_patterns: $( '#sndp-snippet-url-patterns' ).val(),
+					'taxonomies[]': taxonomies,
+					schedule_start: SNDP_Admin.getScheduleValue( 'start' ),
+					schedule_end: SNDP_Admin.getScheduleValue( 'end' )
 				},
 				success: function( response ) {
 					if ( response.success ) {

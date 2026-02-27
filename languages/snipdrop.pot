@@ -1,0 +1,1248 @@
+# Copyright (C) 2026 Shameem Reza
+# This file is distributed under the GPL v2 or later.
+msgid ""
+msgstr ""
+"Project-Id-Version: SnipDrop 1.0.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/snipdrop\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-02-27T14:51:39+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: snipdrop\n"
+
+#. Plugin Name of the plugin
+#: snipdrop.php
+#: includes/admin/class-sndp-admin.php:122
+#: includes/admin/class-sndp-admin.php:128
+msgid "SnipDrop"
+msgstr ""
+
+#. Plugin URI of the plugin
+#: snipdrop.php
+msgid "https://github.com/shameemreza/snipdrop"
+msgstr ""
+
+#. Description of the plugin
+#: snipdrop.php
+msgid "Ready-to-use code snippets for WordPress and WooCommerce. Just enable and go - no coding required."
+msgstr ""
+
+#. Author of the plugin
+#: snipdrop.php
+msgid "Shameem Reza"
+msgstr ""
+
+#. Author URI of the plugin
+#: snipdrop.php
+msgid "https://shameem.dev"
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:139
+#: includes/admin/class-sndp-admin.php:140
+#: includes/admin/class-sndp-admin.php:1064
+msgid "Library"
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:148
+#: includes/admin/class-sndp-admin.php:149
+#: includes/admin/class-sndp-admin.php:1073
+#: includes/admin/views/custom-snippets-page.php:17
+msgid "My Snippets"
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:157
+#: includes/admin/class-sndp-admin.php:158
+#: includes/admin/class-sndp-admin.php:1082
+#: includes/admin/views/custom-snippets-page.php:19
+msgid "Add New"
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:166
+#: includes/admin/class-sndp-admin.php:167
+#: includes/admin/class-sndp-admin.php:1091
+#: snipdrop.php:154
+msgid "Settings"
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:233
+msgid "Enabling..."
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:234
+msgid "Disabling..."
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:235
+msgid "Syncing..."
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:236
+msgid "Saving..."
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:237
+msgid "Deleting..."
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:238
+msgid "An error occurred. Please try again."
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:239
+msgid "Unable to connect. Please check your internet connection and try again."
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:240
+msgid "Are you sure you want to delete this snippet?"
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:241
+#: includes/admin/class-sndp-admin.php:767
+msgid "Snippet copied to My Snippets."
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:242
+msgid "This snippet requires the following plugin(s) to be active:"
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:243
+#: includes/admin/views/admin-page.php:112
+msgid "Loading snippets..."
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:244
+msgid "No snippets found."
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:245
+msgid "No results found."
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:246
+msgid "Showing"
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:247
+msgid "of"
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:248
+msgid "snippets"
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:249
+msgid "Page"
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:250
+msgid "Previous"
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:251
+msgid "Next"
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:252
+msgid "Loading..."
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:253
+msgid "Try Again"
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:254
+#: includes/admin/views/admin-page.php:30
+msgid "Sync Library"
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:255
+msgid "This may be a temporary issue. Try syncing the library or wait a moment."
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:256
+#: includes/admin/views/admin-page.php:234
+msgid "Save Configuration"
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:257
+msgid "Saved!"
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:258
+#: includes/admin/views/add-snippet-page.php:18
+msgid "Update Snippet"
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:259
+msgid "Author:"
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:260
+msgid "Source:"
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:261
+msgid "Edit now?"
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:262
+#: includes/admin/views/custom-snippets-page.php:36
+msgid "Upload & Import"
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:263
+msgid "Restore this revision? Current code will be saved as a new revision."
+msgstr ""
+
+#. translators: %s: Link to SnipDrop admin page
+#: includes/admin/class-sndp-admin.php:284
+#, php-format
+msgid "SnipDrop activated! %s to start enabling snippets."
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:285
+msgid "Go to Snippets"
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:301
+msgid "SnipDrop:"
+msgstr ""
+
+#. translators: %s: Snippet ID
+#: includes/admin/class-sndp-admin.php:305
+#, php-format
+msgid "Snippet \"%s\" was automatically disabled due to an error."
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:320
+msgid "SnipDrop Safe Mode Active"
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:321
+msgid "All snippets are currently disabled. Disable safe mode in settings when ready."
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:336
+#: includes/admin/class-sndp-admin.php:361
+#: includes/admin/class-sndp-admin.php:652
+#: includes/admin/class-sndp-admin.php:667
+msgid "You do not have permission to access this page."
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:375
+msgid "Settings saved."
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:395
+#: includes/admin/class-sndp-admin.php:497
+#: includes/admin/class-sndp-admin.php:549
+#: includes/admin/class-sndp-admin.php:593
+#: includes/admin/class-sndp-admin.php:615
+#: includes/admin/class-sndp-admin.php:690
+#: includes/admin/class-sndp-admin.php:725
+#: includes/admin/class-sndp-admin.php:750
+#: includes/admin/class-sndp-admin.php:783
+#: includes/admin/class-sndp-admin.php:860
+#: includes/admin/class-sndp-admin.php:882
+#: includes/admin/class-sndp-admin.php:915
+#: includes/admin/class-sndp-admin.php:946
+#: includes/admin/class-sndp-admin.php:972
+#: includes/admin/class-sndp-admin.php:1013
+#: includes/admin/class-sndp-admin.php:1117
+#: includes/admin/class-sndp-admin.php:1202
+#: includes/admin/class-sndp-admin.php:1235
+msgid "Permission denied."
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:400
+#: includes/admin/class-sndp-admin.php:620
+#: includes/admin/class-sndp-admin.php:695
+#: includes/admin/class-sndp-admin.php:732
+#: includes/admin/class-sndp-admin.php:755
+#: includes/admin/class-sndp-admin.php:865
+#: includes/admin/class-sndp-admin.php:887
+#: includes/admin/class-sndp-admin.php:920
+#: includes/admin/class-sndp-admin.php:951
+#: includes/admin/class-sndp-admin.php:1020
+msgid "Invalid snippet ID."
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:413
+msgid "Required plugin(s) not active."
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:427
+msgid "Snippet enabled."
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:428
+msgid "Snippet disabled."
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:520
+msgid "Library synced successfully."
+msgstr ""
+
+#. translators: %d: Number of new snippets
+#: includes/admin/class-sndp-admin.php:524
+#, php-format
+msgid "Library synced. %d new snippet(s) available!"
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:738
+msgid "Configuration saved."
+msgstr ""
+
+#. translators: %s: Error message
+#: includes/admin/class-sndp-admin.php:821
+#, php-format
+msgid "PHP Syntax Error: %s"
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:838
+msgid "Snippet saved."
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:870
+msgid "Snippet deleted."
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:893
+#: includes/admin/class-sndp-admin.php:926
+#: includes/admin/class-sndp-admin.php:957
+msgid "Snippet not found."
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:900
+msgid "Snippet activated."
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:901
+msgid "Snippet deactivated."
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:931
+msgid "Snippet duplicated."
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:1026
+msgid "Could not restore revision."
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:1029
+msgid "Revision restored. Reload to see the updated code."
+msgstr ""
+
+#. translators: %d: active snippet count
+#: includes/admin/class-sndp-admin.php:1053
+#, php-format
+msgid "SnipDrop (%d)"
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:1101
+msgid "Safe Mode Active"
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:1124
+msgid "No action or snippets selected."
+msgstr ""
+
+#. translators: %d: Number of snippets processed
+#: includes/admin/class-sndp-admin.php:1155
+#, php-format
+msgid "%d snippet(s) updated."
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:1239
+msgid "No file uploaded."
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:1247
+msgid "Invalid file type. Please upload a JSON file."
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:1252
+msgid "File is too large. Maximum size is 2MB."
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:1263
+msgid "Unable to access the filesystem."
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:1268
+msgid "The file is empty."
+msgstr ""
+
+#: includes/admin/class-sndp-admin.php:1273
+msgid "Invalid JSON file. Please check the file format."
+msgstr ""
+
+#. translators: %d: Number of imported snippets
+#: includes/admin/class-sndp-admin.php:1286
+#, php-format
+msgid "Successfully imported %d snippet(s). All imported snippets are set to inactive for safety."
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:17
+msgid "Edit Snippet"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:17
+msgid "Add New Snippet"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:18
+msgid "Save Snippet"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:100
+msgid "Back to My Snippets"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:111
+#: includes/admin/views/custom-snippets-page.php:87
+msgid "Title"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:117
+msgid "Enter snippet title"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:123
+msgid "Description"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:128
+msgid "Optional description of what this snippet does"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:134
+msgid "Code"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:135
+msgid "Toggle dark mode"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:137
+msgid "Dark Mode"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:143
+msgid "PHP"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:147
+msgid "JavaScript"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:151
+msgid "CSS"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:155
+msgid "HTML"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:163
+msgid "Do not include opening PHP tags for PHP snippets."
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:176
+msgid "Save & Activate"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:183
+#: includes/admin/views/custom-snippets-page.php:86
+msgid "Status"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:190
+msgid "Active"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:193
+msgid "Enable to run this snippet on your site."
+msgstr ""
+
+#. translators: 1: user name, 2: date
+#: includes/admin/views/add-snippet-page.php:210
+#, php-format
+msgid "Created by %1$s on %2$s"
+msgstr ""
+
+#. translators: %s: date
+#: includes/admin/views/add-snippet-page.php:217
+#, php-format
+msgid "Created on %s"
+msgstr ""
+
+#. translators: 1: user name, 2: date
+#: includes/admin/views/add-snippet-page.php:237
+#, php-format
+msgid "Modified by %1$s on %2$s"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:253
+msgid "Run Location"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:254
+msgid "Where should this snippet execute? \"Everywhere\" runs on all pages. Auto-Insert locations inject output at specific positions. \"Shortcode Only\" lets you place it manually via [snipdrop] shortcode."
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:258
+msgid "Global"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:260
+msgid "Run Everywhere"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:263
+msgid "Frontend Only"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:266
+msgid "Admin Only"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:269
+msgid "Auto-Insert"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:271
+msgid "Site Header (wp_head)"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:274
+msgid "Site Footer (wp_footer)"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:277
+msgid "Before Post Content"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:280
+msgid "After Post Content"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:283
+msgid "Manual"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:285
+msgid "Shortcode Only"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:290
+msgid "Use shortcode:"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:292
+msgid "Copy shortcode"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:302
+msgid "User Condition"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:303
+msgid "Restrict this snippet to logged-in users, logged-out users, or run for everyone."
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:308
+msgid "All Users"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:311
+msgid "Logged In Only"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:314
+msgid "Logged Out Only"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:318
+msgid "Run this snippet for specific user states."
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:342
+msgid "Schedule"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:343
+msgid "Set a date range for when this snippet should be active. Uses your site timezone. Leave both empty to run always."
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:347
+msgid "Start"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:353
+#: includes/admin/views/add-snippet-page.php:371
+msgid "YYYY-MM-DD"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:365
+msgid "End"
+msgstr ""
+
+#. translators: %s: Site timezone string
+#: includes/admin/views/add-snippet-page.php:386
+#, php-format
+msgid "24-hour time (e.g. 14:30 = 2:30 PM). Timezone: %s. Leave empty to run always."
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:396
+msgid "Post Types"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:399
+msgid "Leave unchecked to run on all post types."
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:416
+msgid "Specific Posts / Pages"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:417
+msgid "Search and select specific posts or pages where this snippet should run. Leave empty to run on all content."
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:424
+msgid "Search posts and pages..."
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:449
+msgid "Leave empty to run on all posts and pages."
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:457
+msgid "URL Patterns"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:458
+msgid "Run this snippet only on URLs matching these patterns. Use * as wildcard. One pattern per line. Example: /shop/*, /checkout, /my-account/*"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:464
+msgid "/shop/*&#10;/checkout&#10;/my-account/*"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:466
+msgid "One pattern per line. Use * as wildcard. Leave empty to run on all URLs."
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:474
+msgid "Taxonomy Terms"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:475
+msgid "Run this snippet only when the current post belongs to specific categories, tags, or custom taxonomy terms."
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:553
+msgid "Leave all unchecked to run on all content."
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:566
+msgid "Revision History"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:567
+msgid "Previous versions of this snippet are saved automatically. Click Restore to revert to that version."
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:591
+msgid "Restore"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:603
+msgid "Execution"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:604
+msgid "Hook: the WordPress action this snippet attaches to. Priority: lower numbers run earlier. Default (init, 10) works for most snippets."
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:608
+msgid "Hook"
+msgstr ""
+
+#: includes/admin/views/add-snippet-page.php:619
+msgid "Priority"
+msgstr ""
+
+#: includes/admin/views/admin-page.php:25
+msgid "SnipDrop Snippets"
+msgstr ""
+
+#. translators: %s: Library version
+#: includes/admin/views/admin-page.php:36
+#, php-format
+msgid "Library v%s"
+msgstr ""
+
+#. translators: %s: Human-readable time difference
+#: includes/admin/views/admin-page.php:43
+#, php-format
+msgid "Last synced %s ago"
+msgstr ""
+
+#: includes/admin/views/admin-page.php:56
+msgid "Categories"
+msgstr ""
+
+#: includes/admin/views/admin-page.php:60
+msgid "All Snippets"
+msgstr ""
+
+#: includes/admin/views/admin-page.php:76
+msgid "Enabled:"
+msgstr ""
+
+#: includes/admin/views/admin-page.php:81
+msgid "Errors:"
+msgstr ""
+
+#: includes/admin/views/admin-page.php:92
+msgid "Search snippets..."
+msgstr ""
+
+#: includes/admin/views/admin-page.php:94
+msgid "Grid view"
+msgstr ""
+
+#: includes/admin/views/admin-page.php:97
+msgid "List view"
+msgstr ""
+
+#: includes/admin/views/admin-page.php:129
+msgid "New"
+msgstr ""
+
+#: includes/admin/views/admin-page.php:132
+msgid "Popular"
+msgstr ""
+
+#: includes/admin/views/admin-page.php:146
+msgid "Error:"
+msgstr ""
+
+#: includes/admin/views/admin-page.php:146
+#: includes/admin/views/settings-page.php:180
+#: includes/class-sndp-custom-snippets.php:346
+#: includes/class-sndp-error-handler.php:167
+#: includes/class-sndp-error-handler.php:199
+#: includes/class-sndp-snippets.php:186
+msgid "Unknown error"
+msgstr ""
+
+#: includes/admin/views/admin-page.php:152
+msgid "Required plugins"
+msgstr ""
+
+#: includes/admin/views/admin-page.php:170
+msgid "View Code"
+msgstr ""
+
+#: includes/admin/views/admin-page.php:174
+msgid "Configure"
+msgstr ""
+
+#: includes/admin/views/admin-page.php:178
+msgid "Copy to My Snippets"
+msgstr ""
+
+#: includes/admin/views/admin-page.php:190
+msgid "Snippet Code"
+msgstr ""
+
+#: includes/admin/views/admin-page.php:200
+msgid "Copy to clipboard"
+msgstr ""
+
+#: includes/admin/views/admin-page.php:202
+msgid "Copy"
+msgstr ""
+
+#: includes/admin/views/admin-page.php:223
+msgid "Configure Snippet"
+msgstr ""
+
+#: includes/admin/views/admin-page.php:237
+msgid "Reset to Defaults"
+msgstr ""
+
+#: includes/admin/views/custom-snippets-page.php:24
+msgid "Export"
+msgstr ""
+
+#: includes/admin/views/custom-snippets-page.php:29
+msgid "Import"
+msgstr ""
+
+#: includes/admin/views/custom-snippets-page.php:39
+msgid "Cancel"
+msgstr ""
+
+#: includes/admin/views/custom-snippets-page.php:42
+msgid "Supports SnipDrop, WPCode, and Code Snippets export formats. All snippets are imported as inactive."
+msgstr ""
+
+#: includes/admin/views/custom-snippets-page.php:54
+msgid "No custom snippets yet"
+msgstr ""
+
+#: includes/admin/views/custom-snippets-page.php:55
+msgid "Create your own code snippets, copy from the library, or import from another plugin."
+msgstr ""
+
+#: includes/admin/views/custom-snippets-page.php:58
+msgid "Create Your First Snippet"
+msgstr ""
+
+#: includes/admin/views/custom-snippets-page.php:61
+msgid "Browse Library"
+msgstr ""
+
+#: includes/admin/views/custom-snippets-page.php:69
+msgid "Bulk Actions"
+msgstr ""
+
+#: includes/admin/views/custom-snippets-page.php:70
+msgid "Activate"
+msgstr ""
+
+#: includes/admin/views/custom-snippets-page.php:71
+msgid "Deactivate"
+msgstr ""
+
+#: includes/admin/views/custom-snippets-page.php:72
+#: includes/admin/views/custom-snippets-page.php:143
+msgid "Delete"
+msgstr ""
+
+#: includes/admin/views/custom-snippets-page.php:75
+msgid "Apply"
+msgstr ""
+
+#: includes/admin/views/custom-snippets-page.php:78
+msgid "Filter snippets..."
+msgstr ""
+
+#: includes/admin/views/custom-snippets-page.php:88
+msgid "Type"
+msgstr ""
+
+#: includes/admin/views/custom-snippets-page.php:89
+msgid "Location"
+msgstr ""
+
+#: includes/admin/views/custom-snippets-page.php:90
+msgid "Author"
+msgstr ""
+
+#: includes/admin/views/custom-snippets-page.php:91
+msgid "Updated"
+msgstr ""
+
+#: includes/admin/views/custom-snippets-page.php:133
+msgid "Edit"
+msgstr ""
+
+#: includes/admin/views/custom-snippets-page.php:138
+msgid "Duplicate"
+msgstr ""
+
+#: includes/admin/views/custom-snippets-page.php:162
+msgid "Everywhere"
+msgstr ""
+
+#: includes/admin/views/custom-snippets-page.php:163
+msgid "Frontend"
+msgstr ""
+
+#: includes/admin/views/custom-snippets-page.php:164
+msgid "Admin"
+msgstr ""
+
+#: includes/admin/views/custom-snippets-page.php:165
+msgid "Site Header"
+msgstr ""
+
+#: includes/admin/views/custom-snippets-page.php:166
+msgid "Site Footer"
+msgstr ""
+
+#: includes/admin/views/custom-snippets-page.php:167
+msgid "Before Content"
+msgstr ""
+
+#: includes/admin/views/custom-snippets-page.php:168
+msgid "After Content"
+msgstr ""
+
+#: includes/admin/views/custom-snippets-page.php:188
+#: includes/admin/views/settings-page.php:189
+msgid "ago"
+msgstr ""
+
+#: includes/admin/views/settings-page.php:22
+msgid "SnipDrop Settings"
+msgstr ""
+
+#: includes/admin/views/settings-page.php:31
+msgid "Safe Mode"
+msgstr ""
+
+#: includes/admin/views/settings-page.php:36
+msgid "Enable safe mode (disables all snippets)"
+msgstr ""
+
+#: includes/admin/views/settings-page.php:39
+msgid "When enabled, no snippets will be executed. Use this if you are experiencing issues."
+msgstr ""
+
+#: includes/admin/views/settings-page.php:45
+msgid "Recovery URL"
+msgstr ""
+
+#: includes/admin/views/settings-page.php:50
+msgid "Visit this URL if your site becomes inaccessible due to a snippet error. It will enable safe mode automatically."
+msgstr ""
+
+#: includes/admin/views/settings-page.php:53
+msgid "Keep this URL private!"
+msgstr ""
+
+#: includes/admin/views/settings-page.php:59
+msgid "Admin Bypass"
+msgstr ""
+
+#: includes/admin/views/settings-page.php:64
+msgid "Disable frontend snippets for administrators"
+msgstr ""
+
+#: includes/admin/views/settings-page.php:67
+msgid "When enabled, logged-in administrators will not see frontend snippet output. Useful during development."
+msgstr ""
+
+#: includes/admin/views/settings-page.php:73
+msgid "Error Handling"
+msgstr ""
+
+#: includes/admin/views/settings-page.php:78
+msgid "Automatically disable snippets that cause PHP errors"
+msgstr ""
+
+#: includes/admin/views/settings-page.php:81
+msgid "When enabled, any snippet that causes a fatal error will be automatically deactivated to protect your site."
+msgstr ""
+
+#: includes/admin/views/settings-page.php:87
+msgid "Uninstall"
+msgstr ""
+
+#: includes/admin/views/settings-page.php:92
+msgid "Delete all data when plugin is deleted"
+msgstr ""
+
+#: includes/admin/views/settings-page.php:95
+msgid "When enabled, all plugin data including custom snippets and settings will be permanently deleted when the plugin is uninstalled."
+msgstr ""
+
+#: includes/admin/views/settings-page.php:102
+msgid "Library Information"
+msgstr ""
+
+#: includes/admin/views/settings-page.php:106
+msgid "Library Source"
+msgstr ""
+
+#: includes/admin/views/settings-page.php:114
+msgid "Library Version"
+msgstr ""
+
+#: includes/admin/views/settings-page.php:118
+msgid "Last Synced"
+msgstr ""
+
+#. translators: 1: Date and time, 2: Human readable time difference
+#: includes/admin/views/settings-page.php:125
+#, php-format
+msgid "%1$s (%2$s ago)"
+msgstr ""
+
+#: includes/admin/views/settings-page.php:130
+msgid "Never"
+msgstr ""
+
+#: includes/admin/views/settings-page.php:136
+msgid "Enabled Snippets"
+msgstr ""
+
+#: includes/admin/views/settings-page.php:140
+msgid "Snippets with Errors"
+msgstr ""
+
+#: includes/admin/views/settings-page.php:155
+msgid "Save Settings"
+msgstr ""
+
+#: includes/admin/views/settings-page.php:165
+msgid "Error Log"
+msgstr ""
+
+#: includes/admin/views/settings-page.php:166
+msgid "The following snippets have encountered errors and were automatically disabled:"
+msgstr ""
+
+#: includes/admin/views/settings-page.php:170
+msgid "Snippet"
+msgstr ""
+
+#: includes/admin/views/settings-page.php:171
+msgid "Error"
+msgstr ""
+
+#: includes/admin/views/settings-page.php:172
+msgid "Time"
+msgstr ""
+
+#. translators: %d: Line number where error occurred
+#: includes/admin/views/settings-page.php:183
+#, php-format
+msgid "Line: %d"
+msgstr ""
+
+#: includes/admin/views/settings-page.php:201
+msgid "View Snippets"
+msgstr ""
+
+#: includes/admin/views/settings-page.php:208
+msgid "Third-Party Services"
+msgstr ""
+
+#: includes/admin/views/settings-page.php:210
+msgid "This plugin connects to the following external service:"
+msgstr ""
+
+#: includes/admin/views/settings-page.php:215
+msgid "Service"
+msgstr ""
+
+#: includes/admin/views/settings-page.php:216
+msgid "Purpose"
+msgstr ""
+
+#: includes/admin/views/settings-page.php:217
+msgid "Privacy Policy"
+msgstr ""
+
+#: includes/admin/views/settings-page.php:223
+msgid "Fetching snippet library data"
+msgstr ""
+
+#: includes/admin/views/settings-page.php:226
+msgid "GitHub Privacy Policy"
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:139
+msgid "Untitled Snippet"
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:302
+msgid "(Copy)"
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:316
+msgid "(Custom)"
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:389
+msgid "Unable to parse PHP code."
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:430
+msgid "eval() can execute arbitrary code and is a security risk."
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:431
+msgid "exec() can execute system commands - use with extreme caution."
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:432
+msgid "shell_exec() can execute system commands - use with extreme caution."
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:433
+msgid "system() can execute system commands - use with extreme caution."
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:434
+msgid "passthru() can execute system commands - use with extreme caution."
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:435
+msgid "popen() can open process pipes - potential security risk."
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:436
+msgid "proc_open() can execute system commands - use with extreme caution."
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:437
+msgid "pcntl_exec() can execute programs - use with extreme caution."
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:442
+msgid "base64_decode() is often used to obfuscate malicious code."
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:443
+msgid "file_put_contents() can write arbitrary files - verify the destination."
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:444
+msgid "file_get_contents() with URLs can fetch external content - verify the source."
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:445
+msgid "curl_exec() makes external requests - verify the destination."
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:446
+msgid "fwrite() writes to files - verify the destination."
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:447
+msgid "fputs() writes to files - verify the destination."
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:448
+msgid "unserialize() can be dangerous with untrusted data."
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:449
+msgid "create_function() is deprecated and can execute arbitrary code."
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:450
+msgid "assert() can execute code in older PHP versions."
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:451
+msgid "preg_replace() with /e modifier can execute code (deprecated)."
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:480
+msgid "Variable function calls detected - often used for code obfuscation."
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:488
+msgid "Encoded characters detected - verify the code is not obfuscated."
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:507
+msgid "eval() can execute arbitrary code - consider alternatives."
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:508
+msgid "document.write() can overwrite page content - use DOM methods instead."
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:509
+msgid "innerHTML can introduce XSS vulnerabilities - sanitize input first."
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:510
+msgid "Direct cookie manipulation detected - verify this is intentional."
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:511
+msgid "new Function() can execute arbitrary code like eval()."
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:512
+msgid "setTimeout with string argument can execute code - use function instead."
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:513
+msgid "setInterval with string argument can execute code - use function instead."
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:650
+msgid "Invalid import data."
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:660
+msgid "No snippets found in the import file."
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:712
+msgid "Unrecognized import file format. Supported: SnipDrop, WPCode, Code Snippets."
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:731
+msgid "Imported Snippet"
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:796
+msgid "Imported from WPCode"
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:849
+msgid "Imported from Code Snippets"
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:879
+msgid "Security Warnings"
+msgstr ""
+
+#: includes/class-sndp-custom-snippets.php:893
+msgid "These warnings do not prevent saving. Proceed only if you understand what this code does."
+msgstr ""
+
+#. translators: %d: HTTP response code
+#: includes/class-sndp-library.php:137
+#, php-format
+msgid "Failed to fetch library manifest. HTTP code: %d"
+msgstr ""
+
+#: includes/class-sndp-library.php:147
+msgid "Failed to parse library manifest."
+msgstr ""
+
+#. translators: %s: Snippet ID
+#: includes/class-sndp-library.php:197
+#, php-format
+msgid "Snippet not found: %s"
+msgstr ""
+
+#: includes/class-sndp-library.php:280
+msgid "Snippet not found. Try syncing the library to get the latest updates."
+msgstr ""
+
+#: includes/class-sndp-library.php:282
+msgid "The server is temporarily unavailable. Please try again in a moment."
+msgstr ""
+
+#. translators: %d: HTTP response code
+#: includes/class-sndp-library.php:285
+#, php-format
+msgid "Could not load snippet (error %d). Please try again."
+msgstr ""
+
+#: includes/class-sndp-library.php:296
+msgid "Failed to parse snippet data."
+msgstr ""
+
+#: snipdrop.php:153
+msgid "Snippets"
+msgstr ""

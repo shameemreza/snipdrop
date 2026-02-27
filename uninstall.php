@@ -26,14 +26,19 @@ function sndp_uninstall_cleanup() {
 
 	// Check if user opted to delete data on uninstall.
 	$settings = get_option( 'sndp_settings', array() );
+	// Always remove custom capability from all roles.
+	$roles = wp_roles();
+	foreach ( $roles->role_objects as $role ) {
+		$role->remove_cap( 'sndp_manage_snippets' );
+	}
+
 	if ( empty( $settings['delete_on_uninstall'] ) ) {
-		// User did not opt to delete data, only remove transients.
+		// User did not opt to delete data, only remove transients and capability.
 		delete_transient( 'sndp_manifest' );
 		delete_transient( 'sndp_activated' );
 		delete_transient( 'sndp_error_notice' );
 		delete_transient( 'sndp_new_snippet_count' );
 
-		// Delete all snippet transients.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Uninstall cleanup, bulk delete of transients.
 		$wpdb->query(
 			"DELETE FROM {$wpdb->options} 

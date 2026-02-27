@@ -135,31 +135,37 @@ class SNDP_Custom_Snippets {
 
 		// Sanitize and validate data.
 		$snippet = array(
-			'id'          => $snippet_id,
-			'title'       => sanitize_text_field( $snippet_data['title'] ?? __( 'Untitled Snippet', 'snipdrop' ) ),
-			'description' => sanitize_textarea_field( $snippet_data['description'] ?? '' ),
-			'code'        => $snippet_data['code'] ?? '',
-			'code_type'   => in_array( $snippet_data['code_type'] ?? 'php', array( 'php', 'js', 'css', 'html' ), true )
+			'id'             => $snippet_id,
+			'title'          => sanitize_text_field( $snippet_data['title'] ?? __( 'Untitled Snippet', 'snipdrop' ) ),
+			'description'    => sanitize_textarea_field( $snippet_data['description'] ?? '' ),
+			'code'           => $snippet_data['code'] ?? '',
+			'code_type'      => in_array( $snippet_data['code_type'] ?? 'php', array( 'php', 'js', 'css', 'html' ), true )
 				? $snippet_data['code_type']
 				: 'php',
-			'status'      => in_array( $snippet_data['status'] ?? 'inactive', array( 'active', 'inactive' ), true )
+			'status'         => in_array( $snippet_data['status'] ?? 'inactive', array( 'active', 'inactive' ), true )
 				? $snippet_data['status']
 				: 'inactive',
-			'hook'        => sanitize_text_field( $snippet_data['hook'] ?? 'init' ),
-			'priority'    => absint( $snippet_data['priority'] ?? 10 ),
-			'location'    => in_array( $snippet_data['location'] ?? 'everywhere', $valid_locations, true )
+			'hook'           => sanitize_text_field( $snippet_data['hook'] ?? 'init' ),
+			'priority'       => absint( $snippet_data['priority'] ?? 10 ),
+			'location'       => in_array( $snippet_data['location'] ?? 'everywhere', $valid_locations, true )
 				? $snippet_data['location']
 				: 'everywhere',
-			'user_cond'   => in_array( $snippet_data['user_cond'] ?? 'all', $valid_user_conds, true )
+			'user_cond'      => in_array( $snippet_data['user_cond'] ?? 'all', $valid_user_conds, true )
 				? $snippet_data['user_cond']
 				: 'all',
-			'post_types'  => $post_types,
-			'page_ids'    => sanitize_text_field( $snippet_data['page_ids'] ?? '' ),
-			'source'      => sanitize_text_field( $snippet_data['source'] ?? 'custom' ),
-			'created_at'  => $existing ? $existing['created_at'] : current_time( 'mysql' ),
-			'created_by'  => $existing && isset( $existing['created_by'] ) ? $existing['created_by'] : get_current_user_id(),
-			'updated_at'  => current_time( 'mysql' ),
-			'updated_by'  => get_current_user_id(),
+			'post_types'     => $post_types,
+			'page_ids'       => sanitize_text_field( $snippet_data['page_ids'] ?? '' ),
+			'url_patterns'   => sanitize_textarea_field( $snippet_data['url_patterns'] ?? '' ),
+			'taxonomies'     => isset( $snippet_data['taxonomies'] ) && is_array( $snippet_data['taxonomies'] )
+				? array_map( 'sanitize_text_field', $snippet_data['taxonomies'] )
+				: array(),
+			'schedule_start' => sanitize_text_field( $snippet_data['schedule_start'] ?? '' ),
+			'schedule_end'   => sanitize_text_field( $snippet_data['schedule_end'] ?? '' ),
+			'source'         => sanitize_text_field( $snippet_data['source'] ?? 'custom' ),
+			'created_at'     => $existing ? $existing['created_at'] : current_time( 'mysql' ),
+			'created_by'     => $existing && isset( $existing['created_by'] ) ? $existing['created_by'] : get_current_user_id(),
+			'updated_at'     => current_time( 'mysql' ),
+			'updated_by'     => get_current_user_id(),
 		);
 
 		// Store revision of previous code if editing an existing snippet.
@@ -603,17 +609,21 @@ class SNDP_Custom_Snippets {
 		$export_snippets = array();
 		foreach ( $snippets as $snippet_id => $snippet ) {
 			$export_snippets[] = array(
-				'title'       => $snippet['title'],
-				'description' => $snippet['description'] ?? '',
-				'code'        => $snippet['code'] ?? '',
-				'code_type'   => $snippet['code_type'] ?? 'php',
-				'status'      => $snippet['status'] ?? 'inactive',
-				'location'    => $snippet['location'] ?? 'everywhere',
-				'hook'        => $snippet['hook'] ?? 'init',
-				'priority'    => $snippet['priority'] ?? 10,
-				'user_cond'   => $snippet['user_cond'] ?? 'all',
-				'post_types'  => $snippet['post_types'] ?? array(),
-				'page_ids'    => $snippet['page_ids'] ?? '',
+				'title'          => $snippet['title'],
+				'description'    => $snippet['description'] ?? '',
+				'code'           => $snippet['code'] ?? '',
+				'code_type'      => $snippet['code_type'] ?? 'php',
+				'status'         => $snippet['status'] ?? 'inactive',
+				'location'       => $snippet['location'] ?? 'everywhere',
+				'hook'           => $snippet['hook'] ?? 'init',
+				'priority'       => $snippet['priority'] ?? 10,
+				'user_cond'      => $snippet['user_cond'] ?? 'all',
+				'post_types'     => $snippet['post_types'] ?? array(),
+				'page_ids'       => $snippet['page_ids'] ?? '',
+				'url_patterns'   => $snippet['url_patterns'] ?? '',
+				'taxonomies'     => $snippet['taxonomies'] ?? array(),
+				'schedule_start' => $snippet['schedule_start'] ?? '',
+				'schedule_end'   => $snippet['schedule_end'] ?? '',
 			);
 		}
 
@@ -718,17 +728,21 @@ class SNDP_Custom_Snippets {
 			}
 
 			$normalized[] = array(
-				'title'       => $snippet['title'] ?? __( 'Imported Snippet', 'snipdrop' ),
-				'description' => $snippet['description'] ?? '',
-				'code'        => $snippet['code'] ?? '',
-				'code_type'   => $snippet['code_type'] ?? 'php',
-				'location'    => $snippet['location'] ?? 'everywhere',
-				'hook'        => $snippet['hook'] ?? 'init',
-				'priority'    => $snippet['priority'] ?? 10,
-				'user_cond'   => $snippet['user_cond'] ?? 'all',
-				'post_types'  => $snippet['post_types'] ?? array(),
-				'page_ids'    => $snippet['page_ids'] ?? '',
-				'source'      => 'import',
+				'title'          => $snippet['title'] ?? __( 'Imported Snippet', 'snipdrop' ),
+				'description'    => $snippet['description'] ?? '',
+				'code'           => $snippet['code'] ?? '',
+				'code_type'      => $snippet['code_type'] ?? 'php',
+				'location'       => $snippet['location'] ?? 'everywhere',
+				'hook'           => $snippet['hook'] ?? 'init',
+				'priority'       => $snippet['priority'] ?? 10,
+				'user_cond'      => $snippet['user_cond'] ?? 'all',
+				'post_types'     => $snippet['post_types'] ?? array(),
+				'page_ids'       => $snippet['page_ids'] ?? '',
+				'url_patterns'   => $snippet['url_patterns'] ?? '',
+				'taxonomies'     => $snippet['taxonomies'] ?? array(),
+				'schedule_start' => $snippet['schedule_start'] ?? '',
+				'schedule_end'   => $snippet['schedule_end'] ?? '',
+				'source'         => 'import',
 			);
 		}
 

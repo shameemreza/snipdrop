@@ -170,13 +170,18 @@ class SNDP_Error_Handler {
 				'title'   => $title,
 			);
 
-			// Record error based on snippet type.
-			if ( 'custom' === $snippet_type ) {
-				$custom_snippets = SNDP_Custom_Snippets::instance();
-				$custom_snippets->record_error( $current, $error_data );
-			} else {
-				$snippets = SNDP_Snippets::instance();
-				$snippets->record_snippet_error( $current, $error_data );
+			// Auto-disable the erroring snippet (unless user turned this off).
+			$sndp_settings  = get_option( 'sndp_settings', array() );
+			$should_disable = ! isset( $sndp_settings['auto_disable_errors'] ) || $sndp_settings['auto_disable_errors'];
+
+			if ( $should_disable ) {
+				if ( 'custom' === $snippet_type ) {
+					$custom_snippets = SNDP_Custom_Snippets::instance();
+					$custom_snippets->record_error( $current, $error_data );
+				} else {
+					$snippets = SNDP_Snippets::instance();
+					$snippets->record_snippet_error( $current, $error_data );
+				}
 			}
 
 			// Log error to file.

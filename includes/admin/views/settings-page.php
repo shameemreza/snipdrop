@@ -56,11 +56,39 @@ if ( ! defined( 'ABSPATH' ) ) {
 				</tr>
 				<tr>
 					<th scope="row">
+						<label for="sndp_disable_for_admins"><?php esc_html_e( 'Admin Bypass', 'snipdrop' ); ?></label>
+					</th>
+					<td>
+						<label>
+							<input type="checkbox" name="sndp_disable_for_admins" id="sndp_disable_for_admins" value="1" <?php checked( ! empty( $settings['disable_for_admins'] ) ); ?>>
+							<?php esc_html_e( 'Disable frontend snippets for administrators', 'snipdrop' ); ?>
+						</label>
+						<p class="description">
+							<?php esc_html_e( 'When enabled, logged-in administrators will not see frontend snippet output. Useful during development.', 'snipdrop' ); ?>
+						</p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row">
+						<label for="sndp_auto_disable_errors"><?php esc_html_e( 'Error Handling', 'snipdrop' ); ?></label>
+					</th>
+					<td>
+						<label>
+							<input type="checkbox" name="sndp_auto_disable_errors" id="sndp_auto_disable_errors" value="1" <?php checked( ! isset( $settings['auto_disable_errors'] ) || $settings['auto_disable_errors'] ); ?>>
+							<?php esc_html_e( 'Automatically disable snippets that cause PHP errors', 'snipdrop' ); ?>
+						</label>
+						<p class="description">
+							<?php esc_html_e( 'When enabled, any snippet that causes a fatal error will be automatically deactivated to protect your site.', 'snipdrop' ); ?>
+						</p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row">
 						<label for="sndp_delete_on_uninstall"><?php esc_html_e( 'Uninstall', 'snipdrop' ); ?></label>
 					</th>
 					<td>
 						<label>
-							<input type="checkbox" name="sndp_delete_on_uninstall" id="sndp_delete_on_uninstall" value="1" <?php checked( isset( $settings['delete_on_uninstall'] ) && $settings['delete_on_uninstall'] ); ?>>
+							<input type="checkbox" name="sndp_delete_on_uninstall" id="sndp_delete_on_uninstall" value="1" <?php checked( ! empty( $settings['delete_on_uninstall'] ) ); ?>>
 							<?php esc_html_e( 'Delete all data when plugin is deleted', 'snipdrop' ); ?>
 						</label>
 						<p class="description">
