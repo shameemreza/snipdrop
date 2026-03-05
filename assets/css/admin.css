@@ -2024,6 +2024,173 @@
 	margin-left: 6px;
 }
 
+/* Compatibility badges */
+.sndp-badge-compat {
+	display: inline-block;
+	font-size: 10px;
+	font-weight: 600;
+	line-height: 1;
+	padding: 3px 6px;
+	border-radius: 3px;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	vertical-align: middle;
+	margin-left: 6px;
+	cursor: help;
+}
+
+.sndp-badge-compat--incompatible {
+	background: #fcf0f1;
+	color: #d63638;
+	border: 1px solid #d63638;
+}
+
+.sndp-badge-compat--warning {
+	background: #fcf9e8;
+	color: #996800;
+	border: 1px solid #dba617;
+}
+
+/* Incompatible card state */
+.sndp-snippet-card.is-incompatible {
+	opacity: 0.75;
+	border-color: #d63638;
+}
+
+.sndp-snippet-card.is-incompatible .sndp-toggle-slider {
+	background: #dcdcde;
+	cursor: not-allowed;
+}
+
+/* Compatibility issues inline message */
+.sndp-snippet-compat-issues {
+	background: #fcf0f1;
+	border: 1px solid #facfd2;
+	border-radius: 3px;
+	padding: 6px 10px;
+	margin: 8px 0 0;
+	font-size: 12px;
+	color: #8c1a18;
+	line-height: 1.4;
+}
+
+.sndp-snippet-compat-issues .dashicons {
+	font-size: 14px;
+	width: 14px;
+	height: 14px;
+	line-height: 14px;
+	vertical-align: text-top;
+	margin-right: 4px;
+	color: #d63638;
+}
+
+/* Requirement pills */
+.sndp-requires-pills {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+
+.sndp-require-pill {
+	display: inline-block;
+	background: #f0f0f1;
+	color: #50575e;
+	font-size: 11px;
+	font-weight: 500;
+	line-height: 1;
+	padding: 4px 8px;
+	border-radius: 12px;
+	border: 1px solid #c3c4c7;
+	white-space: nowrap;
+}
+
+/* Performance weight badges */
+.sndp-weight-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+	font-size: 11px;
+	font-weight: 500;
+	line-height: 1;
+	padding: 3px 8px;
+	border-radius: 12px;
+	cursor: help;
+	white-space: nowrap;
+}
+
+.sndp-weight-badge .dashicons {
+	font-size: 13px;
+	width: 13px;
+	height: 13px;
+	line-height: 13px;
+}
+
+.sndp-weight-lightweight {
+	background: #edfaef;
+	color: #1e7e34;
+	border: 1px solid #c3e6cb;
+}
+
+.sndp-weight-moderate {
+	background: #f0f0f1;
+	color: #50575e;
+	border: 1px solid #c3c4c7;
+}
+
+.sndp-weight-heavy {
+	background: #fcf9e8;
+	color: #996800;
+	border: 1px solid #dba617;
+}
+
+/* Conflict badges */
+.sndp-badge-conflict {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+	font-size: 10px;
+	font-weight: 600;
+	line-height: 1;
+	padding: 3px 6px;
+	border-radius: 3px;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	vertical-align: middle;
+	margin-left: 6px;
+	cursor: help;
+	background: #fff8e5;
+	color: #996800;
+	border: 1px solid #dba617;
+}
+
+.sndp-badge-conflict .dashicons {
+	font-size: 12px;
+	width: 12px;
+	height: 12px;
+	line-height: 12px;
+}
+
+.sndp-badge-conflict--high {
+	background: #fcf0f1;
+	color: #d63638;
+	border-color: #d63638;
+}
+
+/* Compatibility warnings on custom snippet editor */
+.sndp-compat-warnings {
+	margin: 12px 0 0;
+}
+
+.sndp-compat-warnings ul {
+	margin: 4px 0 0 20px;
+	list-style: disc;
+}
+
+.sndp-compat-warnings li {
+	font-size: 13px;
+	line-height: 1.5;
+}
+
 /* Import form */
 .sndp-import-form {
 	background: #fff;
@@ -2048,4 +2215,182 @@
 	width: 100%;
 	margin: 4px 0 0;
 	font-style: italic;
+}
+
+/* Revision actions */
+.sndp-revision-actions {
+	display: flex;
+	gap: 4px;
+	flex-shrink: 0;
+}
+
+/* Diff Modal */
+.sndp-diff-modal-content {
+	width: 800px;
+	max-width: 92vw;
+	max-height: 85vh;
+	display: flex;
+	flex-direction: column;
+}
+
+.sndp-diff-modal-content .sndp-modal-body {
+	overflow-y: auto;
+	flex: 1;
+	min-height: 0;
+	padding: 0;
+}
+
+.sndp-diff-legend {
+	display: flex;
+	gap: 16px;
+	padding: 10px 16px;
+	border-bottom: 1px solid #dcdcde;
+	font-size: 12px;
+}
+
+.sndp-diff-legend span {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.sndp-diff-legend span::before {
+	content: "";
+	display: inline-block;
+	width: 12px;
+	height: 12px;
+	border-radius: 2px;
+}
+
+.sndp-diff-legend-added::before {
+	background: #d4edda;
+	border: 1px solid #a3d9a5;
+}
+
+.sndp-diff-legend-removed::before {
+	background: #f8d7da;
+	border: 1px solid #f1aeb5;
+}
+
+.sndp-diff-legend-context::before {
+	background: #f6f7f7;
+	border: 1px solid #dcdcde;
+}
+
+.sndp-diff-output {
+	overflow-x: auto;
+}
+
+.sndp-diff-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-family: Menlo, Consolas, "DejaVu Sans Mono", monospace;
+	font-size: 12px;
+	line-height: 1.5;
+	tab-size: 4;
+}
+
+.sndp-diff-table td {
+	padding: 0;
+	vertical-align: top;
+	white-space: pre;
+}
+
+.sndp-diff-gutter {
+	width: 40px;
+	min-width: 40px;
+	text-align: right;
+	padding: 1px 8px 1px 4px !important;
+	color: #8c8f94;
+	border-right: 1px solid #dcdcde;
+	-webkit-user-select: none;
+	user-select: none;
+	font-size: 11px;
+}
+
+.sndp-diff-line-content {
+	padding: 1px 8px !important;
+	width: 100%;
+}
+
+.sndp-diff-prefix {
+	display: inline-block;
+	width: 16px;
+	text-align: center;
+	-webkit-user-select: none;
+	user-select: none;
+	font-weight: 600;
+}
+
+.sndp-diff-added {
+	background: #d4edda;
+}
+
+.sndp-diff-added .sndp-diff-gutter {
+	background: #c3e6cb;
+	color: #155724;
+}
+
+.sndp-diff-added .sndp-diff-prefix {
+	color: #155724;
+}
+
+.sndp-diff-removed {
+	background: #f8d7da;
+}
+
+.sndp-diff-removed .sndp-diff-gutter {
+	background: #f1aeb5;
+	color: #721c24;
+}
+
+.sndp-diff-removed .sndp-diff-prefix {
+	color: #721c24;
+}
+
+.sndp-diff-context {
+	background: #fff;
+}
+
+.sndp-diff-context .sndp-diff-gutter {
+	background: #f6f7f7;
+}
+
+.sndp-diff-separator td {
+	padding: 4px 8px !important;
+	background: #f0f0f1;
+	text-align: center;
+	color: #8c8f94;
+	font-size: 11px;
+	border-top: 1px solid #dcdcde;
+	border-bottom: 1px solid #dcdcde;
+}
+
+.sndp-diff-identical {
+	padding: 24px 16px;
+	text-align: center;
+	color: #50575e;
+	font-style: italic;
+}
+
+@media screen and (max-width: 782px) {
+	.sndp-diff-modal-content {
+		width: 96vw;
+		max-height: 80vh;
+	}
+
+	.sndp-diff-gutter {
+		width: 30px;
+		min-width: 30px;
+		font-size: 10px;
+		padding: 1px 4px !important;
+	}
+
+	.sndp-diff-table {
+		font-size: 11px;
+	}
+
+	.sndp-revision-actions {
+		flex-direction: column;
+	}
 }

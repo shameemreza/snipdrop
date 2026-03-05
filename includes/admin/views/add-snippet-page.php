@@ -159,7 +159,7 @@ unset( $post_types['attachment'] );
 						name="code"
 						class="large-text code"
 						rows="15"><?php echo esc_textarea( $snippet['code'] ); ?></textarea>
-					<p class="description">
+					<p class="description" id="sndp-code-hint">
 						<?php esc_html_e( 'Do not include opening PHP tags for PHP snippets.', 'snipdrop' ); ?>
 					</p>
 				</div>
@@ -476,7 +476,11 @@ unset( $post_types['attachment'] );
 					</h3>
 					<div class="sndp-metabox-content">
 						<?php
-						/** @var array<string, WP_Taxonomy> $available_taxonomies */
+						/**
+						 * Available public taxonomies.
+						 *
+						 * @var array<string, WP_Taxonomy> $available_taxonomies
+						 */
 						$available_taxonomies = get_taxonomies(
 							array(
 								'public'  => true,
@@ -578,20 +582,30 @@ unset( $post_types['attachment'] );
 											$rev_user = $u->display_name;
 										}
 									}
+									$rev_date_display = date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), strtotime( $rev['date'] ) );
 									?>
 									<div class="sndp-revision-item">
 										<span class="sndp-revision-date">
-											<?php echo esc_html( date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), strtotime( $rev['date'] ) ) ); ?>
+											<?php echo esc_html( $rev_date_display ); ?>
 											<?php if ( $rev_user ) : ?>
 												<em><?php echo esc_html( $rev_user ); ?></em>
 											<?php endif; ?>
 										</span>
-										<button type="button"
-											class="button button-small sndp-restore-revision"
-											data-snippet-id="<?php echo esc_attr( $snippet['id'] ); ?>"
-											data-revision-index="<?php echo esc_attr( $idx ); ?>">
-											<?php esc_html_e( 'Restore', 'snipdrop' ); ?>
-										</button>
+										<span class="sndp-revision-actions">
+											<button type="button"
+												class="button button-small sndp-view-diff"
+												<?php // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Encoding snippet code for safe HTML attribute transport to JS diff viewer. ?>
+												data-revision-code="<?php echo esc_attr( base64_encode( $rev['code'] ) ); ?>"
+												data-revision-date="<?php echo esc_attr( $rev_date_display ); ?>">
+												<?php esc_html_e( 'View Changes', 'snipdrop' ); ?>
+											</button>
+											<button type="button"
+												class="button button-small sndp-restore-revision"
+												data-snippet-id="<?php echo esc_attr( $snippet['id'] ); ?>"
+												data-revision-index="<?php echo esc_attr( $idx ); ?>">
+												<?php esc_html_e( 'Restore', 'snipdrop' ); ?>
+											</button>
+										</span>
 									</div>
 								<?php endforeach; ?>
 							</div>
@@ -632,4 +646,22 @@ unset( $post_types['attachment'] );
 			</div>
 		</div>
 	</form>
+</div>
+
+<!-- Diff Modal -->
+<div id="sndp-diff-modal" class="sndp-modal">
+	<div class="sndp-modal-content sndp-diff-modal-content">
+		<div class="sndp-modal-header">
+			<h3 id="sndp-diff-modal-title"><?php esc_html_e( 'View Changes', 'snipdrop' ); ?></h3>
+			<button type="button" class="sndp-modal-close">&times;</button>
+		</div>
+		<div class="sndp-modal-body">
+			<div id="sndp-diff-legend" class="sndp-diff-legend">
+				<span class="sndp-diff-legend-added"><?php esc_html_e( 'Added', 'snipdrop' ); ?></span>
+				<span class="sndp-diff-legend-removed"><?php esc_html_e( 'Removed', 'snipdrop' ); ?></span>
+				<span class="sndp-diff-legend-context"><?php esc_html_e( 'Unchanged', 'snipdrop' ); ?></span>
+			</div>
+			<div id="sndp-diff-output" class="sndp-diff-output"></div>
+		</div>
+	</div>
 </div>

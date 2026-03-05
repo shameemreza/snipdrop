@@ -196,6 +196,13 @@ class SNDP_Custom_Snippets {
 		unset( $snippets[ $snippet_id ] );
 		update_option( $this->option_name, $snippets, false );
 
+		// Clean up revisions for the deleted snippet.
+		$all_revisions = get_option( $this->revisions_option, array() );
+		if ( isset( $all_revisions[ $snippet_id ] ) ) {
+			unset( $all_revisions[ $snippet_id ] );
+			update_option( $this->revisions_option, $all_revisions, false );
+		}
+
 		return true;
 	}
 
@@ -280,6 +287,16 @@ class SNDP_Custom_Snippets {
 				return 'active' === $snippet['status'];
 			}
 		);
+	}
+
+	/**
+	 * Get count of active custom snippets without loading full snippet data.
+	 *
+	 * @since 1.0.0
+	 * @return int
+	 */
+	public function get_active_count() {
+		return count( $this->get_active() );
 	}
 
 	/**

@@ -170,8 +170,7 @@ class SNDP_Error_Handler {
 				'title'   => $title,
 			);
 
-			// Auto-disable the erroring snippet (unless user turned this off).
-			$sndp_settings  = get_option( 'sndp_settings', array() );
+			$sndp_settings  = SNDP_Snippets::instance()->get_settings();
 			$should_disable = ! isset( $sndp_settings['auto_disable_errors'] ) || $sndp_settings['auto_disable_errors'];
 
 			if ( $should_disable ) {
@@ -200,6 +199,11 @@ class SNDP_Error_Handler {
 				),
 				HOUR_IN_SECONDS
 			);
+
+			// Send email notification if enabled.
+			if ( $should_disable ) {
+				$this->send_error_email( $current, $snippet_type, $error_data );
+			}
 		}
 	}
 
@@ -428,5 +432,84 @@ class SNDP_Error_Handler {
 			unset( $history[ $key ] );
 			update_option( 'sndp_error_history', $history, false );
 		}
+	}
+
+	/**
+	 * Send email notification when a snippet is auto-disabled.
+	 *
+	 * Rate-limited to one email per 15 minutes to prevent flooding.
+	 *
+	 * @since 1.0.0
+	 * @param string $snippet_id   Snippet ID.
+	 * @param string $snippet_type Snippet type (library or custom).
+	 * @param array  $error        Error data with 'message', 'line', 'file', 'title' keys.
+	 */
+	private function send_error_email( $snippet_id, $snippet_type, $error ) {
+		$settings = get_option( 'sndp_settings', array() );
+
+		// Check if email notifications are enabled (default: on).
+		if ( isset( $settings['email_notifications'] ) && ! $settings['email_notifications'] ) {
+			return;
+		}
+
+		// Rate limit: one email per 15 minutes.
+		if ( get_transient( 'sndp_last_error_email' ) ) {
+			return;
+		}
+
+		$to = ! empty( $settings['notification_email'] ) ? $settings['notification_email'] : get_option( 'admin_email' );
+		if ( empty( $to ) || ! is_email( $to ) ) {
+			return;
+		}
+
+		$title   = isset( $error['title'] ) ? $error['title'] : $snippet_id;
+		$message = isset( $error['message'] ) ? $error['message'] : __( 'Unknown error', 'snipdrop' );
+		$line    = isset( $error['line'] ) ? absint( $error['line'] ) : 0;
+		$time    = gmdate( 'Y-m-d H:i:s' ) . ' UTC';
+
+		$site_name    = wp_specialchars_decode( get_option( 'blogname' ), ENT_QUOTES );
+		$settings_url = admin_url( 'admin.php?page=snipdrop-settings' );
+		$snippets_url = 'custom' === $snippet_type
+			? admin_url( 'admin.php?page=snipdrop-custom' )
+			: admin_url( 'admin.php?page=snipdrop' );
+
+		/* translators: 1: Snippet title, 2: Site name */
+		$subject = sprintf( __( '[%2$s] SnipDrop: Snippet "%1$s" was auto-disabled', 'snipdrop' ), $title, $site_name );
+
+		$body  = '<div style="font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;max-width:600px;margin:0 auto;">';
+		$body .= '<h2 style="color:#1d2327;font-size:18px;margin:0 0 16px;">' . esc_html__( 'Snippet Auto-Disabled', 'snipdrop' ) . '</h2>';
+		$body .= '<p style="color:#50575e;font-size:14px;line-height:1.6;margin:0 0 16px;">';
+		$body .= esc_html__( 'A snippet on your site caused a PHP error and has been automatically disabled to protect your site.', 'snipdrop' );
+		$body .= '</p>';
+
+		$body .= '<table style="width:100%;border-collapse:collapse;margin:0 0 20px;">';
+		$body .= '<tr><td style="padding:8px 12px;border:1px solid #dcdcde;font-weight:600;background:#f6f7f7;width:120px;">' . esc_html__( 'Snippet', 'snipdrop' ) . '</td>';
+		$body .= '<td style="padding:8px 12px;border:1px solid #dcdcde;">' . esc_html( $title ) . ' <span style="color:#787c82;">(' . esc_html( $snippet_type ) . ')</span></td></tr>';
+		$body .= '<tr><td style="padding:8px 12px;border:1px solid #dcdcde;font-weight:600;background:#f6f7f7;">' . esc_html__( 'Error', 'snipdrop' ) . '</td>';
+		$body .= '<td style="padding:8px 12px;border:1px solid #dcdcde;color:#d63638;">' . esc_html( $message ) . '</td></tr>';
+
+		if ( $line > 0 ) {
+			$body .= '<tr><td style="padding:8px 12px;border:1px solid #dcdcde;font-weight:600;background:#f6f7f7;">' . esc_html__( 'Line', 'snipdrop' ) . '</td>';
+			$body .= '<td style="padding:8px 12px;border:1px solid #dcdcde;">' . $line . '</td></tr>';
+		}
+
+		$body .= '<tr><td style="padding:8px 12px;border:1px solid #dcdcde;font-weight:600;background:#f6f7f7;">' . esc_html__( 'Time', 'snipdrop' ) . '</td>';
+		$body .= '<td style="padding:8px 12px;border:1px solid #dcdcde;">' . esc_html( $time ) . '</td></tr>';
+		$body .= '</table>';
+
+		$body .= '<p style="margin:0 0 8px;">';
+		$body .= '<a href="' . esc_url( $snippets_url ) . '" style="display:inline-block;background:#2271b1;color:#fff;padding:8px 16px;border-radius:3px;text-decoration:none;font-size:13px;">';
+		$body .= esc_html__( 'View Snippets', 'snipdrop' ) . '</a></p>';
+		$body .= '<p style="color:#787c82;font-size:12px;margin:16px 0 0;">';
+		/* translators: %s: Settings page URL */
+		$body .= sprintf( esc_html__( 'You can manage email notifications in %s.', 'snipdrop' ), '<a href="' . esc_url( $settings_url ) . '">' . esc_html__( 'SnipDrop Settings', 'snipdrop' ) . '</a>' );
+		$body .= '</p></div>';
+
+		$headers = array( 'Content-Type: text/html; charset=UTF-8' );
+
+		wp_mail( $to, $subject, $body, $headers );
+
+		// Set rate-limit transient (15 minutes).
+		set_transient( 'sndp_last_error_email', time(), 15 * MINUTE_IN_SECONDS );
 	}
 }

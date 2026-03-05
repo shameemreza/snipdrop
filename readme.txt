@@ -37,6 +37,11 @@ That is it. The snippet runs immediately. No page refresh needed, no code editin
 * **Curated Library:** Pre-tested snippets that work out of the box.
 * **One-Click Toggle:** Enable and disable snippets instantly.
 * **Configurable Snippets:** Change settings like button text or IDs without touching code.
+* **Compatibility Checker:** See at a glance whether your PHP version, WordPress version, and plugins meet a snippet's requirements before you enable it.
+* **Conflict Detection:** Warns you when two active snippets hook into the same WordPress action or filter, with high-risk alerts for critical hooks.
+* **Performance Badges:** Every snippet shows its expected performance impact — Lightweight, Moderate, or Heavy — so you can make informed decisions.
+* **Email Error Alerts:** Get an email notification when a snippet is auto-disabled due to an error, with rate limiting to prevent flooding.
+* **Visual Diff for Revisions:** Compare any revision to the current code with a line-by-line diff view highlighting added, removed, and unchanged lines.
 * **Custom Code Editor:** Full PHP, JS, CSS, and HTML support with syntax highlighting.
 * **Editor Dark Mode:** Toggle dark mode in the code editor for comfortable coding.
 * **Copy to My Snippets:** Copy any library snippet and customize it to fit your needs.
@@ -65,6 +70,7 @@ Control exactly where and when your snippets run:
 = Error Protection =
 
 * **Automatic Error Detection:** Snippets that cause PHP errors are disabled automatically.
+* **Email Error Alerts:** Receive email notifications when a snippet is auto-disabled. Rate-limited to one email per 15 minutes. Configurable in Settings.
 * **Safe Mode:** Disable all snippets at once if something goes wrong.
 * **Recovery URL:** A secret URL that enables safe mode even if you cannot access the admin.
 * **Suspicious Code Detection:** Warns about potentially dangerous code patterns before saving.
@@ -73,6 +79,16 @@ Control exactly where and when your snippets run:
 = Custom Capabilities =
 
 SnipDrop uses a custom `sndp_manage_snippets` capability. Administrators get it automatically, and you can grant it to other roles (e.g., Editor) using any capability manager plugin; without giving them full `manage_options` access.
+
+= Smart Badges =
+
+SnipDrop gives you detailed insight into every snippet before you enable it:
+
+* **Compatibility Badges:** Each library snippet shows whether your environment meets its requirements. Incompatible snippets are clearly marked in red, and their toggles are disabled to prevent errors.
+* **Requirement Pills:** See exactly what a snippet needs — "WooCommerce 10.0+", "PHP 8.0+", etc. — at a glance on every card.
+* **Conflict Detection:** When two active snippets register callbacks on the same WordPress hook, SnipDrop shows an orange "Potential Conflict" badge. For critical hooks (checkout, pricing, login), the badge turns red.
+* **Performance Weight:** Every snippet is classified as Lightweight, Moderate, or Heavy based on what the code does. Custom snippets are analyzed automatically when you save them.
+* **Custom Code Analysis:** When you save a custom PHP snippet, SnipDrop checks for PHP version requirements, plugin dependencies, and performance patterns — and warns you before anything breaks.
 
 = Snippet Categories =
 
@@ -148,6 +164,18 @@ Yes. Go to My Snippets and click Export to download all or selected snippets as 
 
 Yes. SnipDrop uses a custom capability (`sndp_manage_snippets`). Use any capability manager plugin to grant this capability to the Editor role or any other role.
 
+= What do the compatibility and performance badges mean? =
+
+Each library snippet shows badges based on your environment. If a snippet requires a plugin you do not have installed or a PHP version higher than yours, it will be marked as "Incompatible" and the toggle will be disabled. Performance badges indicate expected impact: Lightweight (minimal), Moderate (some processing), or Heavy (database queries or external calls).
+
+= What happens if two snippets conflict? =
+
+SnipDrop automatically detects when two active snippets hook into the same WordPress action or filter. You will see an orange "Potential Conflict" badge on the affected snippets. For critical hooks like checkout fields or pricing, the badge turns red. The snippets still work — the badges are warnings to help you test your site.
+
+= Will I get notified if a snippet is auto-disabled? =
+
+Yes. By default, SnipDrop sends you an email when a snippet causes an error and is automatically disabled. You can configure the notification email or turn this off in Settings. Emails are rate-limited to one per 15 minutes.
+
 = How often are new snippets added? =
 
 The snippet library is updated regularly. Click Sync Library in the plugin to check for new additions. You will also see a notification badge when new snippets are available.
@@ -162,15 +190,16 @@ Yes. SnipDrop works with WP Super Cache, W3 Total Cache, LiteSpeed Cache, WP Roc
 
 = Does SnipDrop slow down my site? =
 
-No. SnipDrop only loads active snippets and uses WordPress's built-in hook system. There are no additional database queries on the frontend beyond reading the stored options.
+No. SnipDrop only loads active snippets and uses WordPress's built-in hook system. There are no additional database queries on the frontend beyond reading the stored options. Each snippet also shows a performance badge (Lightweight, Moderate, Heavy) so you can see the expected impact before enabling.
 
 == Screenshots ==
 
-1. Snippet library with category filtering, search, and toggle controls.
+1. Snippet library with compatibility badges, performance weight, and conflict indicators.
 2. Configurable snippet settings modal.
 3. My Snippets page with search, bulk actions, and grid/list view toggle.
 4. Add New snippet page with code editor, dark mode, and conditional options.
-5. Settings page with safe mode, admin bypass, error handling, and recovery URL.
+5. Settings page with safe mode, admin bypass, error handling, email alerts, and recovery URL.
+6. Visual diff view comparing a revision to the current code.
 
 == Changelog ==
 
@@ -191,6 +220,12 @@ No. SnipDrop only loads active snippets and uses WordPress's built-in hook syste
 * Date/time scheduling with start and end dates.
 * Custom `sndp_manage_snippets` capability for role-based access.
 * Admin bypass setting to disable frontend snippets for administrators.
+* Environment compatibility checker with dependency badges on every snippet card.
+* Snippet conflict detection with high-risk alerts for critical hooks.
+* Performance impact badges (Lightweight, Moderate, Heavy) for library and custom snippets.
+* Custom code static analysis for PHP version requirements and plugin dependencies.
+* Email error notifications when snippets are auto-disabled (rate-limited, configurable).
+* Visual diff for revisions with line-by-line comparison.
 * Automatic error detection with configurable auto-disable.
 * Safe mode with recovery URL.
 * Suspicious code pattern detection with warnings.

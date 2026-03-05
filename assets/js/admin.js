@@ -141,6 +141,7 @@
 
 			// Revisions.
 			$( document ).on( 'click', '.sndp-restore-revision', this.handleRestoreRevision );
+			$( document ).on( 'click', '.sndp-view-diff', this.handleViewDiff );
 
 			// ESC key to close modal.
 			$( document ).on( 'keyup', function( e ) {
@@ -535,6 +536,18 @@
 				$phpOptions.addClass( 'hidden' );
 			}
 
+			// Update the code editor hint for the selected type.
+			var $hint = $( '#sndp-code-hint' );
+			if ( $hint.length ) {
+				var hints = {
+					php:  sndp_admin.strings.hint_php  || '',
+					js:   sndp_admin.strings.hint_js   || '',
+					css:  sndp_admin.strings.hint_css  || '',
+					html: sndp_admin.strings.hint_html || ''
+				};
+				$hint.html( hints[ codeType ] || hints.php );
+			}
+
 			// Toggle conditional options based on location.
 			SNDP_Admin.toggleConditionalOptions();
 		},
@@ -596,12 +609,25 @@
 							$toggle.prop( 'checked', false );
 						}
 						SNDP_Admin.showNotice( response.data.message, 'success' );
+
+						// Show conflict warnings (non-blocking) after successful enable.
+						if ( response.data.conflict_warnings && response.data.conflict_warnings.length ) {
+							var conflictMsg = sndp_admin.strings.conflict_enable_warn + '\n' + response.data.conflict_warnings.join( '\n' ) + '\n\n' + sndp_admin.strings.conflict_proceed;
+							SNDP_Admin.showNotice( conflictMsg, 'warning' );
+						}
 					} else {
-						// Check for missing plugins error.
 						var errorMsg = response.data.message || sndp_admin.strings.error;
+
+						// Compatibility issues from the checker.
+						if ( response.data.compat_issues && response.data.compat_issues.length ) {
+							errorMsg = sndp_admin.strings.compat_enable_block + '\n\n' + response.data.compat_issues.join( '\n' );
+						}
+
+						// Legacy: missing plugins fallback.
 						if ( response.data.missing_plugins && response.data.missing_plugins.length ) {
 							errorMsg = sndp_admin.strings.plugin_required + '\n\n' + response.data.missing_plugins.join( '\n' );
 						}
+
 						SNDP_Admin.showNotice( errorMsg );
 						$toggle.prop( 'checked', ! $toggle.prop( 'checked' ) );
 					}
@@ -1090,6 +1116,12 @@
 							$toggle.prop( 'checked', false );
 						}
 						SNDP_Admin.showNotice( response.data.message, 'success' );
+
+						// Show conflict warnings (non-blocking) after activation.
+						if ( response.data.conflict_warnings && response.data.conflict_warnings.length ) {
+							var conflictMsg = sndp_admin.strings.conflict_enable_warn + '\n' + response.data.conflict_warnings.join( '\n' ) + '\n\n' + sndp_admin.strings.conflict_proceed;
+							SNDP_Admin.showNotice( conflictMsg, 'warning' );
+						}
 					} else {
 						SNDP_Admin.showNotice( response.data.message || sndp_admin.strings.error );
 						$toggle.prop( 'checked', ! $toggle.prop( 'checked' ) );
@@ -1245,8 +1277,19 @@
 
 						// Show warnings if any.
 						$( '.sndp-code-warnings' ).remove();
+						$( '.sndp-compat-warnings' ).remove();
 						if ( response.data.warnings_html ) {
 							$( '.sndp-code-field' ).after( response.data.warnings_html );
+						}
+
+						// Show compatibility warnings if any.
+						if ( response.data.compat_warnings && response.data.compat_warnings.length ) {
+							var html = '<div class="sndp-compat-warnings notice notice-warning inline"><p><strong>' + escHtml( sndp_admin.strings.compat_code_warn ) + '</strong></p><ul>';
+							for ( var i = 0; i < response.data.compat_warnings.length; i++ ) {
+								html += '<li>' + escHtml( response.data.compat_warnings[ i ] ) + '</li>';
+							}
+							html += '</ul></div>';
+							$( '.sndp-code-field' ).after( html );
 						}
 
 						// Show shortcode hint if location is shortcode.
@@ -1604,6 +1647,149 @@
 					$submit.prop( 'disabled', false ).text( sndp_admin.strings.import_submit );
 				}
 			} );
+		},
+
+		/**
+		 * Line-based diff using longest common subsequence.
+		 * Returns an array of { type: 'added'|'removed'|'context', line: string }.
+		 */
+		computeDiff: function( oldLines, newLines ) {
+			var m = oldLines.length;
+			var n = newLines.length;
+			var dp = [];
+			var i, j;
+
+			for ( i = 0; i <= m; i++ ) {
+				dp[ i ] = [];
+				for ( j = 0; j <= n; j++ ) {
+					if ( 0 === i || 0 === j ) {
+						dp[ i ][ j ] = 0;
+					} else if ( oldLines[ i - 1 ] === newLines[ j - 1 ] ) {
+						dp[ i ][ j ] = dp[ i - 1 ][ j - 1 ] + 1;
+					} else {
+						dp[ i ][ j ] = Math.max( dp[ i - 1 ][ j ], dp[ i ][ j - 1 ] );
+					}
+				}
+			}
+
+			var result = [];
+			i = m;
+			j = n;
+
+			while ( i > 0 || j > 0 ) {
+				if ( i > 0 && j > 0 && oldLines[ i - 1 ] === newLines[ j - 1 ] ) {
+					result.unshift( { type: 'context', line: oldLines[ i - 1 ] } );
+					i--;
+					j--;
+				} else if ( j > 0 && ( 0 === i || dp[ i ][ j - 1 ] >= dp[ i - 1 ][ j ] ) ) {
+					result.unshift( { type: 'added', line: newLines[ j - 1 ] } );
+					j--;
+				} else {
+					result.unshift( { type: 'removed', line: oldLines[ i - 1 ] } );
+					i--;
+				}
+			}
+
+			return result;
+		},
+
+		/**
+		 * Collapse unchanged lines, keeping context lines around changes.
+		 */
+		collapseContext: function( diff, contextSize ) {
+			contextSize = contextSize || 2;
+			var keep = [];
+			var i, j;
+
+			for ( i = 0; i < diff.length; i++ ) {
+				if ( 'context' !== diff[ i ].type ) {
+					for ( j = Math.max( 0, i - contextSize ); j <= Math.min( diff.length - 1, i + contextSize ); j++ ) {
+						keep[ j ] = true;
+					}
+				}
+			}
+
+			var collapsed = [];
+			var skipping = false;
+
+			for ( i = 0; i < diff.length; i++ ) {
+				if ( keep[ i ] ) {
+					skipping = false;
+					collapsed.push( diff[ i ] );
+				} else if ( ! skipping ) {
+					skipping = true;
+					collapsed.push( { type: 'separator', line: '' } );
+				}
+			}
+
+			return collapsed;
+		},
+
+		handleViewDiff: function( e ) {
+			e.preventDefault();
+			var $btn = $( this );
+			var revCode = atob( $btn.data( 'revision-code' ) );
+			var revDate = $btn.data( 'revision-date' );
+
+			var currentCode = '';
+			if ( SNDP_Admin.codeEditor && SNDP_Admin.codeEditor.codemirror ) {
+				currentCode = SNDP_Admin.codeEditor.codemirror.getValue();
+			} else {
+				currentCode = $( '#sndp-snippet-code' ).val() || '';
+			}
+
+			var oldLines = revCode.split( '\n' );
+			var newLines = currentCode.split( '\n' );
+			var diff = SNDP_Admin.computeDiff( oldLines, newLines );
+			var collapsed = SNDP_Admin.collapseContext( diff, 2 );
+
+			var html = '<table class="sndp-diff-table"><tbody>';
+			var oldNum = 0;
+			var newNum = 0;
+
+			for ( var i = 0; i < collapsed.length; i++ ) {
+				var entry = collapsed[ i ];
+
+				if ( 'separator' === entry.type ) {
+					html += '<tr class="sndp-diff-separator"><td class="sndp-diff-gutter" colspan="2"></td><td class="sndp-diff-line-content">···</td></tr>';
+					continue;
+				}
+
+				if ( 'removed' === entry.type ) {
+					oldNum++;
+					html += '<tr class="sndp-diff-removed">';
+					html += '<td class="sndp-diff-gutter sndp-diff-old-num">' + oldNum + '</td>';
+					html += '<td class="sndp-diff-gutter sndp-diff-new-num"></td>';
+					html += '<td class="sndp-diff-line-content"><span class="sndp-diff-prefix">−</span>' + escHtml( entry.line || ' ' ) + '</td>';
+					html += '</tr>';
+				} else if ( 'added' === entry.type ) {
+					newNum++;
+					html += '<tr class="sndp-diff-added">';
+					html += '<td class="sndp-diff-gutter sndp-diff-old-num"></td>';
+					html += '<td class="sndp-diff-gutter sndp-diff-new-num">' + newNum + '</td>';
+					html += '<td class="sndp-diff-line-content"><span class="sndp-diff-prefix">+</span>' + escHtml( entry.line || ' ' ) + '</td>';
+					html += '</tr>';
+				} else {
+					oldNum++;
+					newNum++;
+					html += '<tr class="sndp-diff-context">';
+					html += '<td class="sndp-diff-gutter sndp-diff-old-num">' + oldNum + '</td>';
+					html += '<td class="sndp-diff-gutter sndp-diff-new-num">' + newNum + '</td>';
+					html += '<td class="sndp-diff-line-content"><span class="sndp-diff-prefix"> </span>' + escHtml( entry.line || ' ' ) + '</td>';
+					html += '</tr>';
+				}
+			}
+
+			html += '</tbody></table>';
+
+			if ( 0 === diff.length || ( 1 === collapsed.length && 'separator' === collapsed[0].type ) ) {
+				html = '<p class="sndp-diff-identical">' + ( sndp_admin.strings.diff_identical || 'No changes — the code is identical.' ) + '</p>';
+			}
+
+			var title = ( sndp_admin.strings.diff_title || 'Changes since %s' ).replace( '%s', escHtml( revDate ) );
+			$( '#sndp-diff-modal-title' ).html( title );
+			$( '#sndp-diff-output' ).html( html );
+			$( '#sndp-diff-modal' ).addClass( 'sndp-modal-open' );
 		},
 
 		closeModal: function() {

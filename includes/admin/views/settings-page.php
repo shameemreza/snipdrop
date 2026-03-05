@@ -84,6 +84,26 @@ if ( ! defined( 'ABSPATH' ) ) {
 				</tr>
 				<tr>
 					<th scope="row">
+						<label for="sndp_email_notifications"><?php esc_html_e( 'Error Email Alerts', 'snipdrop' ); ?></label>
+					</th>
+					<td>
+						<label>
+							<input type="checkbox" name="sndp_email_notifications" id="sndp_email_notifications" value="1" <?php checked( ! isset( $settings['email_notifications'] ) || $settings['email_notifications'] ); ?>>
+							<?php esc_html_e( 'Email me when a snippet is auto-disabled due to an error', 'snipdrop' ); ?>
+						</label>
+						<p class="description">
+							<?php esc_html_e( 'Receive an email notification when a snippet causes a fatal error and is automatically disabled. Emails are rate-limited to one per 15 minutes.', 'snipdrop' ); ?>
+						</p>
+						<br>
+						<label for="sndp_notification_email"><?php esc_html_e( 'Notification Email:', 'snipdrop' ); ?></label>
+						<input type="email" name="sndp_notification_email" id="sndp_notification_email" class="regular-text" value="<?php echo esc_attr( ! empty( $settings['notification_email'] ) ? $settings['notification_email'] : get_option( 'admin_email' ) ); ?>" placeholder="<?php echo esc_attr( get_option( 'admin_email' ) ); ?>">
+						<p class="description">
+							<?php esc_html_e( 'Leave empty to use the site admin email.', 'snipdrop' ); ?>
+						</p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row">
 						<label for="sndp_delete_on_uninstall"><?php esc_html_e( 'Uninstall', 'snipdrop' ); ?></label>
 					</th>
 					<td>

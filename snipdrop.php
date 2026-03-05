@@ -91,6 +91,8 @@ final class SnipDrop {
 		require_once SNDP_PLUGIN_DIR . 'includes/class-sndp-custom-snippets.php';
 		require_once SNDP_PLUGIN_DIR . 'includes/class-sndp-executor.php';
 		require_once SNDP_PLUGIN_DIR . 'includes/class-sndp-error-handler.php';
+		require_once SNDP_PLUGIN_DIR . 'includes/class-sndp-compatibility.php';
+		require_once SNDP_PLUGIN_DIR . 'includes/class-sndp-conflicts.php';
 
 		// Admin classes.
 		if ( is_admin() ) {
@@ -112,33 +114,32 @@ final class SnipDrop {
 		add_action( 'plugins_loaded', array( $this, 'init' ), 0 );
 
 		// Map custom capability to manage_options as fallback.
-		add_filter( 'user_has_cap', array( $this, 'map_capability' ), 10, 4 );
+		add_filter( 'map_meta_cap', array( $this, 'map_meta_cap' ), 10, 4 );
 
 		// Add settings link to plugins page.
 		add_filter( 'plugin_action_links_' . SNDP_PLUGIN_BASENAME, array( $this, 'plugin_action_links' ) );
 	}
 
 	/**
-	 * Grant sndp_manage_snippets to any user who has manage_options.
-	 *
-	 * This ensures administrators always have access without requiring
-	 * re-activation, while still allowing the capability to be granted
-	 * independently to other roles (e.g. Editor).
+	 * Map sndp_manage_snippets to manage_options for users who lack the
+	 * explicit capability. This fires only when sndp_manage_snippets is
+	 * checked, not on every current_user_can() call.
 	 *
 	 * @since 1.0.0
-	 * @param bool[]   $allcaps All capabilities for the user.
-	 * @param string[] $caps    Required primitive capabilities.
-	 * @param array    $args    Arguments: [0] = requested cap, [1] = user ID.
-	 * @param WP_User  $user    The user object.
-	 * @return bool[]
+	 * @param string[] $caps    Required primitive capabilities for the requested cap.
+	 * @param string   $cap     The capability being checked.
+	 * @param int      $user_id The user ID.
+	 * @param array    $args    Additional arguments passed to the capability check.
+	 * @return string[]
 	 */
-	public function map_capability( $allcaps, $caps, $args, $user ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
-		if ( isset( $args[0] ) && SNDP_CAPABILITY === $args[0] ) {
-			if ( ! empty( $allcaps['manage_options'] ) ) {
-				$allcaps[ SNDP_CAPABILITY ] = true;
+	public function map_meta_cap( $caps, $cap, $user_id, $args ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
+		if ( SNDP_CAPABILITY === $cap ) {
+			$user = get_userdata( $user_id );
+			if ( $user && $user->has_cap( 'manage_options' ) ) {
+				$caps = array( 'manage_options' );
 			}
 		}
-		return $allcaps;
+		return $caps;
 	}
 
 	/**

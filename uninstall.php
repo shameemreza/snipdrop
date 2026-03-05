@@ -38,6 +38,7 @@ function sndp_uninstall_cleanup() {
 		delete_transient( 'sndp_activated' );
 		delete_transient( 'sndp_error_notice' );
 		delete_transient( 'sndp_new_snippet_count' );
+		delete_transient( 'sndp_last_error_email' );
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Uninstall cleanup, bulk delete of transients.
 		$wpdb->query(
@@ -69,6 +70,9 @@ function sndp_uninstall_cleanup() {
 	delete_transient( 'sndp_manifest' );
 	delete_transient( 'sndp_activated' );
 	delete_transient( 'sndp_snippet_error_notice' );
+	delete_transient( 'sndp_last_error_email' );
+	delete_transient( 'sndp_error_notice' );
+	delete_transient( 'sndp_new_snippet_count' );
 
 	// Delete all snippet transients.
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Uninstall cleanup, bulk delete of transients.

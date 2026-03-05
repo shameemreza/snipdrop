@@ -47,6 +47,20 @@ class SNDP_Admin {
 	private $custom_snippets;
 
 	/**
+	 * Compatibility checker.
+	 *
+	 * @var SNDP_Compatibility
+	 */
+	private $compatibility;
+
+	/**
+	 * Conflict detector.
+	 *
+	 * @var SNDP_Conflicts
+	 */
+	private $conflicts;
+
+	/**
 	 * Get instance.
 	 *
 	 * @since 1.0.0
@@ -68,6 +82,8 @@ class SNDP_Admin {
 		$this->snippets        = SNDP_Snippets::instance();
 		$this->library         = SNDP_Library::instance();
 		$this->custom_snippets = SNDP_Custom_Snippets::instance();
+		$this->compatibility   = SNDP_Compatibility::instance();
+		$this->conflicts       = SNDP_Conflicts::instance();
 
 		// Admin menu.
 		add_action( 'admin_menu', array( $this, 'admin_menu' ) );
@@ -230,37 +246,62 @@ class SNDP_Admin {
 				'nonce'           => wp_create_nonce( 'sndp_admin_nonce' ),
 				'editor_settings' => $editor_settings,
 				'strings'         => array(
-					'enabling'         => __( 'Enabling...', 'snipdrop' ),
-					'disabling'        => __( 'Disabling...', 'snipdrop' ),
-					'syncing'          => __( 'Syncing...', 'snipdrop' ),
-					'saving'           => __( 'Saving...', 'snipdrop' ),
-					'deleting'         => __( 'Deleting...', 'snipdrop' ),
-					'error'            => __( 'An error occurred. Please try again.', 'snipdrop' ),
-					'connection_error' => __( 'Unable to connect. Please check your internet connection and try again.', 'snipdrop' ),
-					'confirm_delete'   => __( 'Are you sure you want to delete this snippet?', 'snipdrop' ),
-					'copied'           => __( 'Snippet copied to My Snippets.', 'snipdrop' ),
-					'plugin_required'  => __( 'This snippet requires the following plugin(s) to be active:', 'snipdrop' ),
-					'loading'          => __( 'Loading snippets...', 'snipdrop' ),
-					'no_snippets'      => __( 'No snippets found.', 'snipdrop' ),
-					'no_results'       => __( 'No results found.', 'snipdrop' ),
-					'showing'          => __( 'Showing', 'snipdrop' ),
-					'of'               => __( 'of', 'snipdrop' ),
-					'snippets'         => __( 'snippets', 'snipdrop' ),
-					'page'             => __( 'Page', 'snipdrop' ),
-					'prev'             => __( 'Previous', 'snipdrop' ),
-					'next'             => __( 'Next', 'snipdrop' ),
-					'loading_btn'      => __( 'Loading...', 'snipdrop' ),
-					'try_again'        => __( 'Try Again', 'snipdrop' ),
-					'sync_library'     => __( 'Sync Library', 'snipdrop' ),
-					'error_hint'       => __( 'This may be a temporary issue. Try syncing the library or wait a moment.', 'snipdrop' ),
-					'save_config'      => __( 'Save Configuration', 'snipdrop' ),
-					'saved'            => __( 'Saved!', 'snipdrop' ),
-					'update_snippet'   => __( 'Update Snippet', 'snipdrop' ),
-					'author_label'     => __( 'Author:', 'snipdrop' ),
-					'source_label'     => __( 'Source:', 'snipdrop' ),
-					'edit_now'         => __( 'Edit now?', 'snipdrop' ),
-					'import_submit'    => __( 'Upload & Import', 'snipdrop' ),
-					'confirm_restore'  => __( 'Restore this revision? Current code will be saved as a new revision.', 'snipdrop' ),
+					'enabling'             => __( 'Enabling...', 'snipdrop' ),
+					'disabling'            => __( 'Disabling...', 'snipdrop' ),
+					'syncing'              => __( 'Syncing...', 'snipdrop' ),
+					'saving'               => __( 'Saving...', 'snipdrop' ),
+					'deleting'             => __( 'Deleting...', 'snipdrop' ),
+					'error'                => __( 'An error occurred. Please try again.', 'snipdrop' ),
+					'connection_error'     => __( 'Unable to connect. Please check your internet connection and try again.', 'snipdrop' ),
+					'confirm_delete'       => __( 'Are you sure you want to delete this snippet?', 'snipdrop' ),
+					'copied'               => __( 'Snippet copied to My Snippets.', 'snipdrop' ),
+					'plugin_required'      => __( 'This snippet requires the following plugin(s) to be active:', 'snipdrop' ),
+					'loading'              => __( 'Loading snippets...', 'snipdrop' ),
+					'no_snippets'          => __( 'No snippets found.', 'snipdrop' ),
+					'no_results'           => __( 'No results found.', 'snipdrop' ),
+					'showing'              => __( 'Showing', 'snipdrop' ),
+					'of'                   => __( 'of', 'snipdrop' ),
+					'snippets'             => __( 'snippets', 'snipdrop' ),
+					'page'                 => __( 'Page', 'snipdrop' ),
+					'prev'                 => __( 'Previous', 'snipdrop' ),
+					'next'                 => __( 'Next', 'snipdrop' ),
+					'loading_btn'          => __( 'Loading...', 'snipdrop' ),
+					'try_again'            => __( 'Try Again', 'snipdrop' ),
+					'sync_library'         => __( 'Sync Library', 'snipdrop' ),
+					'error_hint'           => __( 'This may be a temporary issue. Try syncing the library or wait a moment.', 'snipdrop' ),
+					'save_config'          => __( 'Save Configuration', 'snipdrop' ),
+					'saved'                => __( 'Saved!', 'snipdrop' ),
+					'update_snippet'       => __( 'Update Snippet', 'snipdrop' ),
+					'author_label'         => __( 'Author:', 'snipdrop' ),
+					'source_label'         => __( 'Source:', 'snipdrop' ),
+					'edit_now'             => __( 'Edit now?', 'snipdrop' ),
+					'import_submit'        => __( 'Upload & Import', 'snipdrop' ),
+					'confirm_restore'      => __( 'Restore this revision? Current code will be saved as a new revision.', 'snipdrop' ),
+					'compat_compatible'    => __( 'Compatible', 'snipdrop' ),
+					'compat_warning'       => __( 'Check Requirements', 'snipdrop' ),
+					'compat_incompatible'  => __( 'Incompatible', 'snipdrop' ),
+					'compat_issues_title'  => __( 'Compatibility Issues', 'snipdrop' ),
+					'compat_enable_block'  => __( 'This snippet cannot be enabled due to compatibility issues:', 'snipdrop' ),
+					'compat_code_warn'     => __( 'Compatibility Warnings', 'snipdrop' ),
+					'requires_label'       => __( 'Requires:', 'snipdrop' ),
+					'hint_php'             => __( 'Do not include opening &lt;?php tags. Your code runs inside a PHP context.', 'snipdrop' ),
+					'hint_js'              => __( 'Do not wrap in &lt;script&gt; tags. Your code is automatically wrapped when output.', 'snipdrop' ),
+					'hint_css'             => __( 'Do not wrap in &lt;style&gt; tags. Your code is automatically wrapped when output.', 'snipdrop' ),
+					'hint_html'            => __( 'Write raw HTML. It will be inserted directly into the page.', 'snipdrop' ),
+					'weight_lightweight'   => __( 'Lightweight', 'snipdrop' ),
+					'weight_moderate'      => __( 'Moderate', 'snipdrop' ),
+					'weight_heavy'         => __( 'Heavy', 'snipdrop' ),
+					'weight_tip_light'     => __( 'Minimal performance impact. Simple filter or CSS-only change.', 'snipdrop' ),
+					'weight_tip_moderate'  => __( 'Runs on page loads with conditional logic. Test with caching enabled.', 'snipdrop' ),
+					'weight_tip_heavy'     => __( 'Makes database queries or HTTP calls. Monitor site performance.', 'snipdrop' ),
+					'conflict_warning'     => __( 'Potential Conflict', 'snipdrop' ),
+					'conflict_high_risk'   => __( 'High Risk Conflict', 'snipdrop' ),
+					'conflict_notice'      => __( 'Hook Conflicts Detected', 'snipdrop' ),
+					'conflict_enable_warn' => __( 'This snippet may conflict with other active snippets:', 'snipdrop' ),
+					'conflict_proceed'     => __( 'The snippet has been enabled, but please test your site to ensure everything works correctly.', 'snipdrop' ),
+					/* translators: %s: revision date */
+					'diff_title'           => __( 'Changes since %s', 'snipdrop' ),
+					'diff_identical'       => __( 'No changes — the code is identical.', 'snipdrop' ),
 				),
 			)
 		);
@@ -369,8 +410,11 @@ class SNDP_Admin {
 			$settings['safe_mode']           = isset( $_POST['sndp_safe_mode'] );
 			$settings['disable_for_admins']  = isset( $_POST['sndp_disable_for_admins'] );
 			$settings['auto_disable_errors'] = isset( $_POST['sndp_auto_disable_errors'] );
+			$settings['email_notifications'] = isset( $_POST['sndp_email_notifications'] );
+			$settings['notification_email']  = isset( $_POST['sndp_notification_email'] ) ? sanitize_email( wp_unslash( $_POST['sndp_notification_email'] ) ) : '';
 			$settings['delete_on_uninstall'] = isset( $_POST['sndp_delete_on_uninstall'] );
 			update_option( 'sndp_settings', $settings );
+			$this->snippets->invalidate_settings_cache();
 
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Settings saved.', 'snipdrop' ) . '</p></div>';
 		}
@@ -400,89 +444,57 @@ class SNDP_Admin {
 			wp_send_json_error( array( 'message' => __( 'Invalid snippet ID.', 'snipdrop' ) ) );
 		}
 
-		// Check if enabling - if so, verify required plugins are active.
+		// Check if enabling — run full compatibility check first.
 		$currently_enabled = $this->snippets->is_enabled( $snippet_id );
+		$conflict_warnings = array();
+
 		if ( ! $currently_enabled ) {
-			// Trying to enable - check requirements.
 			$snippet = $this->library->get_snippet( $snippet_id );
-			if ( ! is_wp_error( $snippet ) && ! empty( $snippet['requires']['plugins'] ) ) {
-				$missing_plugins = $this->check_missing_plugins( $snippet['requires']['plugins'] );
-				if ( ! empty( $missing_plugins ) ) {
+			if ( ! is_wp_error( $snippet ) ) {
+				$compat = $this->compatibility->check_snippet( $snippet );
+
+				if ( SNDP_Compatibility::STATUS_INCOMPATIBLE === $compat['status'] ) {
 					wp_send_json_error(
 						array(
-							'message'         => __( 'Required plugin(s) not active.', 'snipdrop' ),
-							'missing_plugins' => $missing_plugins,
+							'message'       => __( 'This snippet is not compatible with your environment.', 'snipdrop' ),
+							'compat_status' => $compat['status'],
+							'compat_issues' => $compat['issues'],
 						)
 					);
+				}
+
+				// Check for hook conflicts with other active snippets.
+				$conflict_check = $this->conflicts->check_conflicts( $snippet_id, $snippet, 'library' );
+				if ( $conflict_check['has_conflicts'] ) {
+					foreach ( $conflict_check['conflicts'] as $c ) {
+						$conflict_warnings[] = sprintf(
+							/* translators: 1: Conflicting snippet title, 2: Hook name */
+							__( 'Shares the "%2$s" hook with "%1$s"', 'snipdrop' ),
+							$c['snippet_title'],
+							$c['hook']
+						);
+					}
 				}
 			}
 		}
 
 		$new_status = $this->snippets->toggle_snippet( $snippet_id );
 
-		wp_send_json_success(
-			array(
-				'enabled' => $new_status,
-				'message' => $new_status
-					? __( 'Snippet enabled.', 'snipdrop' )
-					: __( 'Snippet disabled.', 'snipdrop' ),
-			)
+		// Clear conflict cache after toggling.
+		$this->conflicts->clear_cache();
+
+		$response = array(
+			'enabled' => $new_status,
+			'message' => $new_status
+				? __( 'Snippet enabled.', 'snipdrop' )
+				: __( 'Snippet disabled.', 'snipdrop' ),
 		);
-	}
 
-	/**
-	 * Check for missing required plugins.
-	 *
-	 * @since 1.0.0
-	 * @param array $required_plugins Array of required plugin slugs.
-	 * @return array Array of missing plugin names.
-	 */
-	private function check_missing_plugins( $required_plugins ) {
-		$missing = array();
-
-		foreach ( $required_plugins as $plugin ) {
-			$plugin = strtolower( $plugin );
-
-			$is_active = false;
-			switch ( $plugin ) {
-				case 'woocommerce':
-					$is_active = class_exists( 'WooCommerce' );
-					break;
-
-				case 'woocommerce-subscriptions':
-					$is_active = class_exists( 'WC_Subscriptions' );
-					break;
-
-				case 'woocommerce-bookings':
-					$is_active = class_exists( 'WC_Bookings' );
-					break;
-
-				case 'woocommerce-product-addons':
-					$is_active = class_exists( 'WC_Product_Addons' );
-					break;
-
-				case 'woocommerce-product-bundles':
-					$is_active = class_exists( 'WC_Bundles' );
-					break;
-
-				case 'elementor':
-					$is_active = defined( 'ELEMENTOR_VERSION' );
-					break;
-
-				default:
-					// Generic check.
-					if ( ! function_exists( 'is_plugin_active' ) ) {
-						include_once ABSPATH . 'wp-admin/includes/plugin.php';
-					}
-					$is_active = is_plugin_active( $plugin . '/' . $plugin . '.php' );
-			}
-
-			if ( ! $is_active ) {
-				$missing[] = ucwords( str_replace( '-', ' ', $plugin ) );
-			}
+		if ( ! empty( $conflict_warnings ) ) {
+			$response['conflict_warnings'] = $conflict_warnings;
 		}
 
-		return $missing;
+		wp_send_json_success( $response );
 	}
 
 	/**
@@ -569,6 +581,12 @@ class SNDP_Admin {
 
 		$seven_days_ago = gmdate( 'Y-m-d', strtotime( '-7 days' ) );
 
+		// Batch-check compatibility for all snippets on this page.
+		$compat_results = $this->compatibility->check_snippets_batch( $result['snippets'] );
+
+		// Get conflict data for all active snippets.
+		$conflicts_by_snippet = $this->conflicts->get_conflicts_by_snippet();
+
 		foreach ( $result['snippets'] as &$snippet ) {
 			$snippet['is_enabled'] = in_array( $snippet['id'], $enabled_ids, true );
 			$snippet['has_error']  = isset( $error_snippets[ $snippet['id'] ] );
@@ -576,6 +594,36 @@ class SNDP_Admin {
 
 			$added_date        = isset( $snippet['added'] ) ? $snippet['added'] : '';
 			$snippet['is_new'] = ( '' !== $added_date && $added_date >= $seven_days_ago );
+
+			// Compatibility data.
+			$sid = isset( $snippet['id'] ) ? $snippet['id'] : '';
+			if ( isset( $compat_results[ $sid ] ) ) {
+				$snippet['compat_status']  = $compat_results[ $sid ]['status'];
+				$snippet['compat_issues']  = $compat_results[ $sid ]['issues'];
+				$snippet['compat_require'] = $compat_results[ $sid ]['requirements'];
+			} else {
+				$snippet['compat_status']  = 'compatible';
+				$snippet['compat_issues']  = array();
+				$snippet['compat_require'] = array();
+			}
+
+			// Performance weight (from library manifest or auto-detected).
+			if ( ! empty( $snippet['weight'] ) ) {
+				$snippet['perf_weight'] = $snippet['weight'];
+			} else {
+				$snippet['perf_weight'] = 'lightweight';
+			}
+
+			// Conflict data.
+			if ( isset( $conflicts_by_snippet[ $sid ] ) ) {
+				$snippet['has_conflicts']      = true;
+				$snippet['conflict_details']   = $conflicts_by_snippet[ $sid ]['conflicts'];
+				$snippet['high_risk_conflict'] = $conflicts_by_snippet[ $sid ]['has_high_risk'];
+			} else {
+				$snippet['has_conflicts']      = false;
+				$snippet['conflict_details']   = array();
+				$snippet['high_risk_conflict'] = false;
+			}
 		}
 
 		wp_send_json_success( $result );
@@ -832,6 +880,15 @@ class SNDP_Admin {
 			$warnings = $this->custom_snippets->check_suspicious_code( $snippet_data['code'], $snippet_data['code_type'] );
 		}
 
+		// Run compatibility analysis on custom code.
+		$compat_warnings = array();
+		$perf_weight     = 'lightweight';
+		if ( ! empty( $snippet_data['code'] ) ) {
+			$compat_analysis = $this->compatibility->analyze_custom_code( $snippet_data['code'], $snippet_data['code_type'] );
+			$compat_warnings = array_merge( $compat_analysis['php_issues'], $compat_analysis['plugin_issues'] );
+			$perf_weight     = $this->compatibility->detect_weight( $snippet_data['code'], $snippet_data['code_type'] );
+		}
+
 		$snippet_id = $this->custom_snippets->save( $snippet_data );
 
 		$response = array(
@@ -839,11 +896,19 @@ class SNDP_Admin {
 			'snippet_id' => $snippet_id,
 		);
 
-		// Include warnings if any.
+		// Include suspicious code warnings if any.
 		if ( ! empty( $warnings ) ) {
 			$response['warnings']      = $warnings;
 			$response['warnings_html'] = $this->custom_snippets->format_warnings( $warnings );
 		}
+
+		// Include compatibility warnings if any.
+		if ( ! empty( $compat_warnings ) ) {
+			$response['compat_warnings'] = $compat_warnings;
+		}
+
+		// Performance weight.
+		$response['perf_weight'] = $perf_weight;
 
 		wp_send_json_success( $response );
 	}
@@ -887,20 +952,45 @@ class SNDP_Admin {
 			wp_send_json_error( array( 'message' => __( 'Invalid snippet ID.', 'snipdrop' ) ) );
 		}
 
+		// Check for conflicts when activating a custom snippet.
+		$conflict_warnings = array();
+		$snippet_data      = $this->custom_snippets->get( $snippet_id );
+
+		if ( $snippet_data && ( empty( $snippet_data['status'] ) || 'inactive' === $snippet_data['status'] ) ) {
+			$conflict_check = $this->conflicts->check_conflicts( $snippet_id, $snippet_data, 'custom' );
+			if ( $conflict_check['has_conflicts'] ) {
+				foreach ( $conflict_check['conflicts'] as $c ) {
+					$conflict_warnings[] = sprintf(
+						/* translators: 1: Conflicting snippet title, 2: Hook name */
+						__( 'Shares the "%2$s" hook with "%1$s"', 'snipdrop' ),
+						$c['snippet_title'],
+						$c['hook']
+					);
+				}
+			}
+		}
+
 		$new_status = $this->custom_snippets->toggle( $snippet_id );
 
 		if ( false === $new_status ) {
 			wp_send_json_error( array( 'message' => __( 'Snippet not found.', 'snipdrop' ) ) );
 		}
 
-		wp_send_json_success(
-			array(
-				'status'  => $new_status,
-				'message' => 'active' === $new_status
-					? __( 'Snippet activated.', 'snipdrop' )
-					: __( 'Snippet deactivated.', 'snipdrop' ),
-			)
+		// Clear conflict cache after toggling.
+		$this->conflicts->clear_cache();
+
+		$response = array(
+			'status'  => $new_status,
+			'message' => 'active' === $new_status
+				? __( 'Snippet activated.', 'snipdrop' )
+				: __( 'Snippet deactivated.', 'snipdrop' ),
 		);
+
+		if ( ! empty( $conflict_warnings ) ) {
+			$response['conflict_warnings'] = $conflict_warnings;
+		}
+
+		wp_send_json_success( $response );
 	}
 
 	/**
@@ -1040,8 +1130,8 @@ class SNDP_Admin {
 			return;
 		}
 
-		$active_custom  = count( $this->custom_snippets->get_active() );
 		$active_library = count( $this->snippets->get_enabled_snippets() );
+		$active_custom  = $this->custom_snippets->get_active_count();
 		$total_active   = $active_custom + $active_library;
 
 		$wp_admin_bar->add_node(

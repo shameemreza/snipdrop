@@ -28,6 +28,13 @@ class SNDP_Snippets {
 	private static $instance = null;
 
 	/**
+	 * Cached settings to avoid repeated get_option() calls.
+	 *
+	 * @var array|null
+	 */
+	private $settings_cache = null;
+
+	/**
 	 * Get instance.
 	 *
 	 * @since 1.0.0
@@ -50,13 +57,35 @@ class SNDP_Snippets {
 	}
 
 	/**
+	 * Get plugin settings with per-request caching.
+	 *
+	 * @since 1.0.0
+	 * @return array
+	 */
+	public function get_settings() {
+		if ( null === $this->settings_cache ) {
+			$this->settings_cache = get_option( 'sndp_settings', array() );
+		}
+		return $this->settings_cache;
+	}
+
+	/**
+	 * Invalidate the settings cache after writes.
+	 *
+	 * @since 1.0.0
+	 */
+	public function invalidate_settings_cache() {
+		$this->settings_cache = null;
+	}
+
+	/**
 	 * Get all enabled snippets.
 	 *
 	 * @since 1.0.0
 	 * @return array Array of enabled snippet IDs.
 	 */
 	public function get_enabled_snippets() {
-		$settings = get_option( 'sndp_settings', array() );
+		$settings = $this->get_settings();
 		return isset( $settings['enabled_snippets'] ) ? (array) $settings['enabled_snippets'] : array();
 	}
 
@@ -80,7 +109,7 @@ class SNDP_Snippets {
 	 * @return bool True on success.
 	 */
 	public function enable_snippet( $snippet_id ) {
-		$settings = get_option( 'sndp_settings', array() );
+		$settings = $this->get_settings();
 
 		if ( ! isset( $settings['enabled_snippets'] ) ) {
 			$settings['enabled_snippets'] = array();
@@ -89,8 +118,8 @@ class SNDP_Snippets {
 		if ( ! in_array( $snippet_id, $settings['enabled_snippets'], true ) ) {
 			$settings['enabled_snippets'][] = $snippet_id;
 			update_option( 'sndp_settings', $settings );
+			$this->invalidate_settings_cache();
 
-			// Clear error status if re-enabling.
 			$this->clear_snippet_error( $snippet_id );
 		}
 
@@ -105,7 +134,7 @@ class SNDP_Snippets {
 	 * @return bool True on success.
 	 */
 	public function disable_snippet( $snippet_id ) {
-		$settings = get_option( 'sndp_settings', array() );
+		$settings = $this->get_settings();
 
 		if ( ! isset( $settings['enabled_snippets'] ) ) {
 			return true;
@@ -116,6 +145,7 @@ class SNDP_Snippets {
 			unset( $settings['enabled_snippets'][ $key ] );
 			$settings['enabled_snippets'] = array_values( $settings['enabled_snippets'] );
 			update_option( 'sndp_settings', $settings );
+			$this->invalidate_settings_cache();
 		}
 
 		return true;
@@ -245,23 +275,21 @@ class SNDP_Snippets {
 	 * @return bool
 	 */
 	public function is_safe_mode() {
-		// Check constant.
 		if ( defined( 'SNDP_SAFE_MODE' ) && SNDP_SAFE_MODE ) {
 			return true;
 		}
 
+		$settings = $this->get_settings();
+
 		// Check URL parameter with secret key.
 		if ( isset( $_GET['sndp_safe_mode'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			$settings = get_option( 'sndp_settings', array() );
-			$secret   = isset( $settings['secret_key'] ) ? $settings['secret_key'] : '';
+			$secret = isset( $settings['secret_key'] ) ? $settings['secret_key'] : '';
 
 			if ( ! empty( $secret ) && hash_equals( $secret, sanitize_text_field( wp_unslash( $_GET['sndp_safe_mode'] ) ) ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 				return true;
 			}
 		}
 
-		// Check option.
-		$settings = get_option( 'sndp_settings', array() );
 		return isset( $settings['safe_mode'] ) && $settings['safe_mode'];
 	}
 
@@ -272,7 +300,7 @@ class SNDP_Snippets {
 	 * @return string
 	 */
 	public function get_safe_mode_url() {
-		$settings = get_option( 'sndp_settings', array() );
+		$settings = $this->get_settings();
 		$secret   = isset( $settings['secret_key'] ) ? $settings['secret_key'] : '';
 
 		return add_query_arg( 'sndp_safe_mode', $secret, home_url() );

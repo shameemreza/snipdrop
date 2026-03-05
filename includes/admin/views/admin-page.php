@@ -121,7 +121,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 <!-- Snippet Card Template -->
 <script type="text/html" id="tmpl-sndp-snippet-card">
-	<div class="sndp-snippet-card {{ data.is_enabled ? 'enabled' : '' }} {{ data.has_error ? 'has-error' : '' }} {{ data.is_new ? 'is-new' : '' }}" data-snippet-id="{{ data.id }}" data-requires="{{ JSON.stringify(data.requires || []) }}">
+	<div class="sndp-snippet-card {{ data.is_enabled ? 'enabled' : '' }} {{ data.has_error ? 'has-error' : '' }} {{ data.is_new ? 'is-new' : '' }} {{ data.compat_status === 'incompatible' ? 'is-incompatible' : '' }}" data-snippet-id="{{ data.id }}" data-requires="{{ JSON.stringify(data.requires || []) }}" data-compat-status="{{ data.compat_status || 'compatible' }}">
 		<div class="sndp-snippet-header">
 			<h4 class="sndp-snippet-title">
 				{{ data.title }}
@@ -131,9 +131,21 @@ if ( ! defined( 'ABSPATH' ) ) {
 				<# if ( data.popular ) { #>
 					<span class="sndp-badge-popular"><?php esc_html_e( 'Popular', 'snipdrop' ); ?></span>
 				<# } #>
+			<# if ( data.compat_status === 'incompatible' ) { #>
+				<span class="sndp-badge-compat sndp-badge-compat--incompatible" title="{{ (data.compat_issues || []).join('\n') }}"><?php esc_html_e( 'Incompatible', 'snipdrop' ); ?></span>
+			<# } else if ( data.compat_status === 'warning' ) { #>
+				<span class="sndp-badge-compat sndp-badge-compat--warning" title="{{ (data.compat_issues || []).join('\n') }}"><?php esc_html_e( 'Check Requirements', 'snipdrop' ); ?></span>
+			<# } #>
+			<# if ( data.has_conflicts && data.conflict_details && data.conflict_details.length ) { #>
+				<# var conflictTip = data.conflict_details.map(function(c){ return c.snippet_title + ' (' + c.hook + ')'; }).join('\n'); #>
+				<span class="sndp-badge-conflict {{ data.high_risk_conflict ? 'sndp-badge-conflict--high' : '' }}" title="{{ conflictTip }}">
+					<span class="dashicons dashicons-warning"></span>
+					{{ data.high_risk_conflict ? sndp_admin.strings.conflict_high_risk : sndp_admin.strings.conflict_warning }}
+				</span>
+			<# } #>
 			</h4>
 			<label class="sndp-toggle">
-				<input type="checkbox" class="sndp-toggle-input" {{ data.is_enabled ? 'checked' : '' }} {{ data.has_error ? 'disabled' : '' }}>
+				<input type="checkbox" class="sndp-toggle-input" {{ data.is_enabled ? 'checked' : '' }} {{ data.has_error || data.compat_status === 'incompatible' ? 'disabled' : '' }}>
 				<span class="sndp-toggle-slider"></span>
 			</label>
 		</div>
@@ -147,8 +159,21 @@ if ( ! defined( 'ABSPATH' ) ) {
 			</div>
 		<# } #>
 
+		<# if ( data.compat_status === 'incompatible' && data.compat_issues && data.compat_issues.length ) { #>
+			<div class="sndp-snippet-compat-issues">
+				<span class="dashicons dashicons-info"></span>
+				{{ data.compat_issues[0] }}<# if ( data.compat_issues.length > 1 ) { #> (+{{ data.compat_issues.length - 1 }})<# } #>
+			</div>
+		<# } #>
+
 		<div class="sndp-snippet-meta">
-			<# if ( data.requires && data.requires.length ) { #>
+			<# if ( data.compat_require && data.compat_require.length ) { #>
+				<span class="sndp-requires-pills">
+					<# _.each( data.compat_require, function( req ) { #>
+						<span class="sndp-require-pill">{{ req }}</span>
+					<# }); #>
+				</span>
+			<# } else if ( data.requires && data.requires.length ) { #>
 				<span class="sndp-requires" title="<?php esc_attr_e( 'Required plugins', 'snipdrop' ); ?>">
 					<span class="dashicons dashicons-admin-plugins"></span>
 					{{ data.requires.join(', ') }}
@@ -166,6 +191,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 		<div class="sndp-snippet-footer">
 			<span class="sndp-version">v{{ data.version }}</span>
+			<# if ( data.perf_weight ) { #>
+				<# var wLabels = { lightweight: sndp_admin.strings.weight_lightweight, moderate: sndp_admin.strings.weight_moderate, heavy: sndp_admin.strings.weight_heavy }; #>
+				<# var wTips = { lightweight: sndp_admin.strings.weight_tip_light, moderate: sndp_admin.strings.weight_tip_moderate, heavy: sndp_admin.strings.weight_tip_heavy }; #>
+				<span class="sndp-weight-badge sndp-weight-{{ data.perf_weight }}" title="{{ wTips[ data.perf_weight ] || '' }}">
+					<# if ( data.perf_weight === 'lightweight' ) { #><span class="dashicons dashicons-performance"></span><# } #>
+					<# if ( data.perf_weight === 'moderate' ) { #><span class="dashicons dashicons-update"></span><# } #>
+					<# if ( data.perf_weight === 'heavy' ) { #><span class="dashicons dashicons-warning"></span><# } #>
+					{{ wLabels[ data.perf_weight ] || data.perf_weight }}
+				</span>
+			<# } #>
 			<div class="sndp-snippet-actions">
 				<button type="button" class="button button-small sndp-view-code" data-snippet-id="{{ data.id }}" title="<?php esc_attr_e( 'View Code', 'snipdrop' ); ?>">
 					<span class="dashicons dashicons-editor-code"></span>

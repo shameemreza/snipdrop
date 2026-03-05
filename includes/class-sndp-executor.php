@@ -640,16 +640,25 @@ class SNDP_Executor {
 	 * @return bool True if snippets should be skipped.
 	 */
 	private function is_admin_bypass_active() {
+		static $cached = null;
+
+		if ( null !== $cached ) {
+			return $cached;
+		}
+
 		if ( is_admin() ) {
+			$cached = false;
 			return false;
 		}
 
-		$settings = get_option( 'sndp_settings', array() );
+		$settings = SNDP_Snippets::instance()->get_settings();
 		if ( empty( $settings['disable_for_admins'] ) ) {
+			$cached = false;
 			return false;
 		}
 
-		return current_user_can( 'manage_options' );
+		$cached = current_user_can( 'manage_options' );
+		return $cached;
 	}
 
 	/**
