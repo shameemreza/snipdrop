@@ -70,6 +70,27 @@ class SNDP_Executor {
 	private $active_custom_snippets_cache = null;
 
 	/**
+	 * Queued inline JS from library snippets.
+	 *
+	 * @var array
+	 */
+	private $queued_js = array();
+
+	/**
+	 * Queued inline CSS from library snippets.
+	 *
+	 * @var array
+	 */
+	private $queued_css = array();
+
+	/**
+	 * Queued inline HTML from library snippets.
+	 *
+	 * @var array
+	 */
+	private $queued_html = array();
+
+	/**
 	 * Get instance.
 	 *
 	 * @since 1.0.0
@@ -94,6 +115,11 @@ class SNDP_Executor {
 
 		// Execute snippets on init (after plugins_loaded but early enough).
 		add_action( 'init', array( $this, 'execute_snippets' ), 1 );
+
+		// Output queued CSS/JS/HTML from library snippets.
+		add_action( 'wp_head', array( $this, 'output_queued_css' ), 99 );
+		add_action( 'wp_footer', array( $this, 'output_queued_js' ), 20 );
+		add_action( 'wp_footer', array( $this, 'output_queued_html' ), 20 );
 
 		// Register auto-insert hooks for custom snippets.
 		add_action( 'wp_head', array( $this, 'execute_header_snippets' ), 10 );
@@ -206,11 +232,28 @@ class SNDP_Executor {
 			$code = $this->replace_placeholders( $code, $snippet_id, $snippet['settings'] );
 		}
 
+		$code_type = isset( $snippet['code_type'] ) ? $snippet['code_type'] : 'php';
+
+		// Non-PHP code types are queued for frontend output, not eval'd.
+		switch ( $code_type ) {
+			case 'js':
+				$this->queued_js[ $snippet_id ] = $code;
+				return true;
+
+			case 'css':
+				$this->queued_css[ $snippet_id ] = $code;
+				return true;
+
+			case 'html':
+				$this->queued_html[ $snippet_id ] = $code;
+				return true;
+		}
+
 		// Track current snippet for error handling.
 		$this->current_snippet      = $snippet_id;
 		$this->current_snippet_type = 'library';
 
-		// Execute the code.
+		// Execute PHP code.
 		$result = $this->run_code( $code, $snippet_id, 'library' );
 
 		// Clear current snippet.
@@ -1008,5 +1051,57 @@ class SNDP_Executor {
 	 */
 	public function get_current_snippet() {
 		return $this->current_snippet;
+	}
+
+	/**
+	 * Output queued inline CSS from library snippets in wp_head.
+	 *
+	 * @since 1.0.0
+	 */
+	public function output_queued_css() {
+		if ( empty( $this->queued_css ) ) {
+			return;
+		}
+
+		foreach ( $this->queued_css as $snippet_id => $css ) {
+			echo '<style id="sndp-' . esc_attr( $snippet_id ) . '">' . "\n";
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CSS output from curated library snippets.
+			echo $css . "\n";
+			echo "</style>\n";
+		}
+	}
+
+	/**
+	 * Output queued inline JS from library snippets in wp_footer.
+	 *
+	 * @since 1.0.0
+	 */
+	public function output_queued_js() {
+		if ( empty( $this->queued_js ) ) {
+			return;
+		}
+
+		foreach ( $this->queued_js as $snippet_id => $js ) {
+			echo '<script id="sndp-' . esc_attr( $snippet_id ) . '">' . "\n";
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JS output from curated library snippets.
+			echo $js . "\n";
+			echo "</script>\n";
+		}
+	}
+
+	/**
+	 * Output queued inline HTML from library snippets in wp_footer.
+	 *
+	 * @since 1.0.0
+	 */
+	public function output_queued_html() {
+		if ( empty( $this->queued_html ) ) {
+			return;
+		}
+
+		foreach ( $this->queued_html as $snippet_id => $html ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- HTML output from curated library snippets.
+			echo $html . "\n";
+		}
 	}
 }

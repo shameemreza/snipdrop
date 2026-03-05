@@ -602,10 +602,12 @@
 				success: function( response ) {
 					if ( response.success ) {
 						if ( response.data.enabled ) {
-							$card.addClass( 'enabled' );
+							$card.addClass( 'enabled' ).removeClass( 'has-error' );
+							$card.find( '.sndp-snippet-error' ).remove();
 							$toggle.prop( 'checked', true );
 						} else {
-							$card.removeClass( 'enabled' );
+							$card.removeClass( 'enabled has-error' );
+							$card.find( '.sndp-snippet-error' ).remove();
 							$toggle.prop( 'checked', false );
 						}
 						SNDP_Admin.showNotice( response.data.message, 'success' );
@@ -626,6 +628,15 @@
 						// Legacy: missing plugins fallback.
 						if ( response.data.missing_plugins && response.data.missing_plugins.length ) {
 							errorMsg = sndp_admin.strings.plugin_required + '\n\n' + response.data.missing_plugins.join( '\n' );
+						}
+
+						// Show error inline on the card for syntax errors.
+						if ( response.data.syntax_error ) {
+							$card.addClass( 'has-error' );
+							$card.find( '.sndp-snippet-error' ).remove();
+							$card.find( '.sndp-snippet-desc' ).after(
+								'<div class="sndp-snippet-error"><span class="dashicons dashicons-warning"></span> ' + $( '<span/>' ).text( response.data.message ).html() + '</div>'
+							);
 						}
 
 						SNDP_Admin.showNotice( errorMsg );

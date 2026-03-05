@@ -190,17 +190,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 		</div>
 
 		<div class="sndp-snippet-footer">
-			<span class="sndp-version">v{{ data.version }}</span>
-			<# if ( data.perf_weight ) { #>
-				<# var wLabels = { lightweight: sndp_admin.strings.weight_lightweight, moderate: sndp_admin.strings.weight_moderate, heavy: sndp_admin.strings.weight_heavy }; #>
-				<# var wTips = { lightweight: sndp_admin.strings.weight_tip_light, moderate: sndp_admin.strings.weight_tip_moderate, heavy: sndp_admin.strings.weight_tip_heavy }; #>
-				<span class="sndp-weight-badge sndp-weight-{{ data.perf_weight }}" title="{{ wTips[ data.perf_weight ] || '' }}">
-					<# if ( data.perf_weight === 'lightweight' ) { #><span class="dashicons dashicons-performance"></span><# } #>
-					<# if ( data.perf_weight === 'moderate' ) { #><span class="dashicons dashicons-update"></span><# } #>
-					<# if ( data.perf_weight === 'heavy' ) { #><span class="dashicons dashicons-warning"></span><# } #>
-					{{ wLabels[ data.perf_weight ] || data.perf_weight }}
-				</span>
-			<# } #>
+			<span class="sndp-footer-meta">
+				<span class="sndp-version">v{{ data.version }}</span>
+				<# if ( data.perf_weight ) { #>
+					<# var wLabels = { lightweight: sndp_admin.strings.weight_lightweight, moderate: sndp_admin.strings.weight_moderate, heavy: sndp_admin.strings.weight_heavy }; #>
+					<# var wTips = { lightweight: sndp_admin.strings.weight_tip_light, moderate: sndp_admin.strings.weight_tip_moderate, heavy: sndp_admin.strings.weight_tip_heavy }; #>
+					<span class="sndp-weight-badge sndp-weight-{{ data.perf_weight }}" data-tip="{{ wTips[ data.perf_weight ] || '' }}">
+						<# if ( data.perf_weight === 'lightweight' ) { #><span class="dashicons dashicons-performance"></span><# } #>
+						<# if ( data.perf_weight === 'moderate' ) { #><span class="dashicons dashicons-update"></span><# } #>
+						<# if ( data.perf_weight === 'heavy' ) { #><span class="dashicons dashicons-warning"></span><# } #>
+						{{ wLabels[ data.perf_weight ] || data.perf_weight }}
+					</span>
+				<# } #>
+			</span>
 			<div class="sndp-snippet-actions">
 				<button type="button" class="button button-small sndp-view-code" data-snippet-id="{{ data.id }}" title="<?php esc_attr_e( 'View Code', 'snipdrop' ); ?>">
 					<span class="dashicons dashicons-editor-code"></span>

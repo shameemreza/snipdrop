@@ -388,6 +388,18 @@ class SNDP_Admin {
 		$last_sync       = $this->library->get_last_sync();
 		$total_snippets  = $this->library->get_total_snippets();
 
+		// Clear stale errors for non-PHP snippets (from old eval-all bug).
+		foreach ( $error_snippets as $err_id => $err_data ) {
+			$full = $this->library->get_snippet( $err_id );
+			if ( ! is_wp_error( $full ) ) {
+				$ct = isset( $full['code_type'] ) ? $full['code_type'] : 'php';
+				if ( 'php' !== $ct ) {
+					$this->snippets->clear_snippet_error( $err_id );
+					unset( $error_snippets[ $err_id ] );
+				}
+			}
+		}
+
 		include SNDP_PLUGIN_DIR . 'includes/admin/views/admin-page.php';
 	}
 
@@ -463,6 +475,20 @@ class SNDP_Admin {
 					);
 				}
 
+				// Pre-validate PHP syntax before enabling.
+				$code_type = isset( $snippet['code_type'] ) ? $snippet['code_type'] : 'php';
+				if ( 'php' === $code_type && ! empty( $snippet['code'] ) ) {
+					$syntax_error = $this->validate_php_syntax( $snippet['code'] );
+					if ( $syntax_error ) {
+						wp_send_json_error(
+							array(
+								'message'      => $syntax_error,
+								'syntax_error' => true,
+							)
+						);
+					}
+				}
+
 				// Check for hook conflicts with other active snippets.
 				$conflict_check = $this->conflicts->check_conflicts( $snippet_id, $snippet, 'library' );
 				if ( $conflict_check['has_conflicts'] ) {
@@ -476,6 +502,9 @@ class SNDP_Admin {
 					}
 				}
 			}
+		} else {
+			// When disabling, clear any existing error for this snippet.
+			$this->snippets->clear_snippet_error( $snippet_id );
 		}
 
 		$new_status = $this->snippets->toggle_snippet( $snippet_id );
@@ -588,15 +617,33 @@ class SNDP_Admin {
 		$conflicts_by_snippet = $this->conflicts->get_conflicts_by_snippet();
 
 		foreach ( $result['snippets'] as &$snippet ) {
-			$snippet['is_enabled'] = in_array( $snippet['id'], $enabled_ids, true );
-			$snippet['has_error']  = isset( $error_snippets[ $snippet['id'] ] );
-			$snippet['error_msg']  = $snippet['has_error'] ? $error_snippets[ $snippet['id'] ] : null;
+			$sid = isset( $snippet['id'] ) ? $snippet['id'] : '';
+
+			$snippet['is_enabled'] = in_array( $sid, $enabled_ids, true );
+			$snippet['has_error']  = isset( $error_snippets[ $sid ] );
+			$snippet['error_msg']  = $snippet['has_error'] ? $error_snippets[ $sid ] : null;
 
 			$added_date        = isset( $snippet['added'] ) ? $snippet['added'] : '';
 			$snippet['is_new'] = ( '' !== $added_date && $added_date >= $seven_days_ago );
 
+			// Enrich with full snippet data for configurable/code_type fields.
+			$full_snippet = $this->library->get_snippet( $sid );
+			if ( ! is_wp_error( $full_snippet ) ) {
+				if ( ! empty( $full_snippet['configurable'] ) ) {
+					$snippet['configurable'] = true;
+					$snippet['settings']     = isset( $full_snippet['settings'] ) ? $full_snippet['settings'] : array();
+				}
+				$snippet['code_type'] = isset( $full_snippet['code_type'] ) ? $full_snippet['code_type'] : 'php';
+
+				// Clear stale errors for non-PHP snippets (from old eval-all bug).
+				if ( $snippet['has_error'] && 'php' !== $snippet['code_type'] ) {
+					$this->snippets->clear_snippet_error( $sid );
+					$snippet['has_error'] = false;
+					$snippet['error_msg'] = null;
+				}
+			}
+
 			// Compatibility data.
-			$sid = isset( $snippet['id'] ) ? $snippet['id'] : '';
 			if ( isset( $compat_results[ $sid ] ) ) {
 				$snippet['compat_status']  = $compat_results[ $sid ]['status'];
 				$snippet['compat_issues']  = $compat_results[ $sid ]['issues'];
@@ -957,6 +1004,20 @@ class SNDP_Admin {
 		$snippet_data      = $this->custom_snippets->get( $snippet_id );
 
 		if ( $snippet_data && ( empty( $snippet_data['status'] ) || 'inactive' === $snippet_data['status'] ) ) {
+			// Pre-validate PHP syntax before enabling.
+			$code_type = isset( $snippet_data['code_type'] ) ? $snippet_data['code_type'] : 'php';
+			if ( 'php' === $code_type && ! empty( $snippet_data['code'] ) ) {
+				$syntax_error = $this->validate_php_syntax( $snippet_data['code'] );
+				if ( $syntax_error ) {
+					wp_send_json_error(
+						array(
+							'message'      => $syntax_error,
+							'syntax_error' => true,
+						)
+					);
+				}
+			}
+
 			$conflict_check = $this->conflicts->check_conflicts( $snippet_id, $snippet_data, 'custom' );
 			if ( $conflict_check['has_conflicts'] ) {
 				foreach ( $conflict_check['conflicts'] as $c ) {
@@ -1379,5 +1440,65 @@ class SNDP_Admin {
 				'skipped'  => $result['skipped'],
 			)
 		);
+	}
+
+	/**
+	 * Validate PHP code syntax without executing it.
+	 *
+	 * Uses php -l via proc_open when available, falls back to token_get_all().
+	 *
+	 * @since 1.0.0
+	 * @param string $code PHP code to validate (without opening <?php tag).
+	 * @return string|false Error message on failure, false if syntax is valid.
+	 */
+	private function validate_php_syntax( $code ) {
+		$code = preg_replace( '/^<\?php\s*/', '', $code );
+		$code = preg_replace( '/\?>\s*$/', '', $code );
+
+		$full_code = '<?php ' . $code;
+
+		// Try php -l via proc_open for reliable syntax checking.
+		if ( function_exists( 'proc_open' ) ) {
+			$descriptors = array(
+				0 => array( 'pipe', 'r' ),
+				1 => array( 'pipe', 'w' ),
+				2 => array( 'pipe', 'w' ),
+			);
+
+			$process = @proc_open( 'php -l', $descriptors, $pipes ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.system_calls_proc_open -- Required for syntax validation without executing user code.
+
+			if ( is_resource( $process ) ) {
+				fwrite( $pipes[0], $full_code );
+				fclose( $pipes[0] );
+
+				$stdout = stream_get_contents( $pipes[1] );
+				$stderr = stream_get_contents( $pipes[2] );
+				fclose( $pipes[1] );
+				fclose( $pipes[2] );
+
+				$exit_code = proc_close( $process );
+
+				if ( 0 !== $exit_code ) {
+					$error_output = ! empty( $stderr ) ? $stderr : $stdout;
+					if ( preg_match( '/Parse error:\s*(.+?)(?:\s+in\s+.+)?$/mi', $error_output, $matches ) ) {
+						/* translators: %s: PHP syntax error message */
+						return sprintf( __( 'Syntax error: %s', 'snipdrop' ), trim( $matches[1] ) );
+					}
+					return __( 'The snippet contains a PHP syntax error.', 'snipdrop' );
+				}
+
+				return false;
+			}
+		}
+
+		// Fallback: token_get_all() catches tokenizer-level parse errors.
+		try {
+			$tokens = @token_get_all( $full_code ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Intentionally silenced to capture tokenizer errors.
+		} catch ( \ParseError $e ) {
+			/* translators: %s: PHP syntax error message */
+			return sprintf( __( 'Syntax error: %s', 'snipdrop' ), $e->getMessage() );
+		}
+
+		return false;
 	}
 }
