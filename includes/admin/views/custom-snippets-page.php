@@ -30,18 +30,70 @@ if ( ! defined( 'ABSPATH' ) ) {
 	</button>
 
 	<div id="sndp-import-form" class="sndp-import-form hidden">
-		<form id="sndp-import-upload" enctype="multipart/form-data">
-			<input type="file" name="import_file" id="sndp-import-file" accept=".json">
-			<button type="submit" class="button button-primary" id="sndp-import-submit" disabled>
-				<?php esc_html_e( 'Upload & Import', 'snipdrop' ); ?>
+		<div class="sndp-import-tabs">
+			<button type="button" class="sndp-import-tab active" data-tab="file">
+				<?php esc_html_e( 'From File', 'snipdrop' ); ?>
 			</button>
-			<button type="button" class="button" id="sndp-import-cancel">
-				<?php esc_html_e( 'Cancel', 'snipdrop' ); ?>
+			<button type="button" class="sndp-import-tab" data-tab="plugin">
+				<?php esc_html_e( 'From Plugin', 'snipdrop' ); ?>
 			</button>
-			<p class="description">
-				<?php esc_html_e( 'Supports SnipDrop, WPCode, and Code Snippets export formats. All snippets are imported as inactive.', 'snipdrop' ); ?>
-			</p>
-		</form>
+			<button type="button" class="button sndp-import-close" id="sndp-import-cancel">
+				<span class="dashicons dashicons-no-alt"></span>
+			</button>
+		</div>
+
+		<div class="sndp-import-tab-content" data-tab="file">
+			<form id="sndp-import-upload" enctype="multipart/form-data">
+				<input type="file" name="import_file" id="sndp-import-file" accept=".json">
+				<button type="submit" class="button button-primary" id="sndp-import-submit" disabled>
+					<?php esc_html_e( 'Upload & Import', 'snipdrop' ); ?>
+				</button>
+				<p class="description">
+					<?php esc_html_e( 'Supports SnipDrop, WPCode, and Code Snippets export formats. All snippets are imported as inactive.', 'snipdrop' ); ?>
+				</p>
+			</form>
+		</div>
+
+		<div class="sndp-import-tab-content hidden" data-tab="plugin">
+			<div id="sndp-plugin-importer">
+				<div id="sndp-importer-sources" class="sndp-importer-step">
+					<p class="description"><?php esc_html_e( 'Detected snippet plugins on your site. Select one to import from:', 'snipdrop' ); ?></p>
+					<div id="sndp-importer-source-list" class="sndp-importer-source-list">
+						<p class="sndp-loading"><span class="spinner is-active"></span> <?php esc_html_e( 'Detecting plugins...', 'snipdrop' ); ?></p>
+					</div>
+				</div>
+
+				<div id="sndp-importer-snippets" class="sndp-importer-step hidden">
+					<div class="sndp-importer-header">
+						<button type="button" class="button sndp-importer-back" id="sndp-importer-back">
+							<span class="dashicons dashicons-arrow-left-alt2"></span> <?php esc_html_e( 'Back', 'snipdrop' ); ?>
+						</button>
+						<h3 id="sndp-importer-source-name"></h3>
+					</div>
+					<div class="sndp-importer-select-bar">
+						<label>
+							<input type="checkbox" id="sndp-importer-select-all">
+							<?php esc_html_e( 'Select All', 'snipdrop' ); ?>
+						</label>
+						<span id="sndp-importer-count"></span>
+					</div>
+					<div id="sndp-importer-snippet-list" class="sndp-importer-snippet-list"></div>
+					<div class="sndp-importer-actions">
+						<button type="button" class="button button-primary" id="sndp-importer-import-btn" disabled>
+							<?php esc_html_e( 'Import Selected', 'snipdrop' ); ?>
+						</button>
+					</div>
+				</div>
+
+				<div id="sndp-importer-progress" class="sndp-importer-step hidden">
+					<div class="sndp-importer-progress-bar">
+						<div class="sndp-importer-progress-fill" style="width: 0%"></div>
+					</div>
+					<p id="sndp-importer-progress-text"></p>
+					<div id="sndp-importer-results"></div>
+				</div>
+			</div>
+		</div>
 	</div>
 
 	<hr class="wp-header-end">
@@ -75,7 +127,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 					<?php esc_html_e( 'Apply', 'snipdrop' ); ?>
 				</button>
 			</div>
-			<input type="search" id="sndp-custom-search" class="sndp-search-input" placeholder="<?php esc_attr_e( 'Filter snippets...', 'snipdrop' ); ?>">
+			<div class="sndp-toolbar-right">
+				<input type="search" id="sndp-custom-search" class="sndp-search-input" placeholder="<?php esc_attr_e( 'Filter snippets...', 'snipdrop' ); ?>">
+				<?php $tm_active = SNDP_Testing_Mode::instance()->is_enabled(); ?>
+				<label class="sndp-testing-mode-inline <?php echo $tm_active ? 'is-active' : ''; ?>" title="<?php esc_attr_e( 'Stage changes safely before publishing to visitors', 'snipdrop' ); ?>">
+					<input type="checkbox" class="sndp-testing-mode-toggle" value="1" <?php checked( $tm_active ); ?>>
+					<span class="dashicons dashicons-visibility"></span>
+					<span><?php esc_html_e( 'Testing', 'snipdrop' ); ?></span>
+				</label>
+			</div>
 		</div>
 		<table class="wp-list-table widefat fixed striped sndp-custom-snippets-table">
 			<thead>
@@ -86,6 +146,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 					<th scope="col" class="column-status"><?php esc_html_e( 'Status', 'snipdrop' ); ?></th>
 					<th scope="col" class="column-title"><?php esc_html_e( 'Title', 'snipdrop' ); ?></th>
 					<th scope="col" class="column-type"><?php esc_html_e( 'Type', 'snipdrop' ); ?></th>
+					<th scope="col" class="column-tags"><?php esc_html_e( 'Tags', 'snipdrop' ); ?></th>
 					<th scope="col" class="column-location"><?php esc_html_e( 'Location', 'snipdrop' ); ?></th>
 					<th scope="col" class="column-author"><?php esc_html_e( 'Author', 'snipdrop' ); ?></th>
 					<th scope="col" class="column-updated"><?php esc_html_e( 'Updated', 'snipdrop' ); ?></th>
@@ -149,6 +210,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 							<span class="sndp-code-type sndp-code-type-<?php echo esc_attr( $snippet['code_type'] ); ?>">
 								<?php echo esc_html( strtoupper( $snippet['code_type'] ) ); ?>
 							</span>
+						</td>
+						<td class="column-tags">
+							<?php
+							$snippet_tags = isset( $snippet['tags'] ) ? (array) $snippet['tags'] : array();
+							if ( ! empty( $snippet_tags ) ) {
+								echo '<span class="sndp-tags">';
+								foreach ( array_slice( $snippet_tags, 0, 3 ) as $stag ) {
+									echo '<span class="sndp-tag">' . esc_html( $stag ) . '</span>';
+								}
+								echo '</span>';
+							} else {
+								echo '<span class="sndp-no-tags">&mdash;</span>';
+							}
+							?>
 						</td>
 						<td class="column-location">
 							<?php

@@ -70,6 +70,13 @@ class SNDP_Executor {
 	private $active_custom_snippets_cache = null;
 
 	/**
+	 * Cached global scripts option.
+	 *
+	 * @var array|null
+	 */
+	private $global_scripts_cache = null;
+
+	/**
 	 * Queued inline JS from library snippets.
 	 *
 	 * @var array
@@ -121,13 +128,64 @@ class SNDP_Executor {
 		add_action( 'wp_footer', array( $this, 'output_queued_js' ), 20 );
 		add_action( 'wp_footer', array( $this, 'output_queued_html' ), 20 );
 
+		// Global Header & Footer scripts.
+		add_action( 'wp_head', array( $this, 'output_global_header_scripts' ), 100 );
+		add_action( 'wp_body_open', array( $this, 'output_global_body_scripts' ), 1 );
+		add_action( 'wp_footer', array( $this, 'output_global_footer_scripts' ), 99 );
+
 		// Register auto-insert hooks for custom snippets.
 		add_action( 'wp_head', array( $this, 'execute_header_snippets' ), 10 );
+		add_action( 'wp_body_open', array( $this, 'execute_body_open_snippets' ), 10 );
 		add_action( 'wp_footer', array( $this, 'execute_footer_snippets' ), 10 );
 		add_filter( 'the_content', array( $this, 'execute_content_snippets' ), 10 );
 
-		// Register shortcode.
+		// WooCommerce auto-insert hooks.
+		if ( class_exists( 'WooCommerce' ) ) {
+			add_action( 'woocommerce_before_shop_loop', array( $this, 'execute_wc_before_shop_loop' ), 5 );
+			add_action( 'woocommerce_after_shop_loop', array( $this, 'execute_wc_after_shop_loop' ), 15 );
+			add_action( 'woocommerce_before_single_product', array( $this, 'execute_wc_before_single_product' ), 5 );
+			add_action( 'woocommerce_after_single_product', array( $this, 'execute_wc_after_single_product' ), 15 );
+			add_action( 'woocommerce_before_cart', array( $this, 'execute_wc_before_cart' ), 5 );
+			add_action( 'woocommerce_before_checkout_form', array( $this, 'execute_wc_before_checkout' ), 5 );
+			add_action( 'woocommerce_after_checkout_form', array( $this, 'execute_wc_after_checkout' ), 15 );
+			add_action( 'woocommerce_thankyou', array( $this, 'execute_wc_thankyou' ), 15 );
+		}
+
+		// Register shortcodes.
 		add_shortcode( 'snipdrop', array( $this, 'render_shortcode' ) );
+		$this->register_custom_shortcodes();
+	}
+
+	/**
+	 * Register custom named shortcodes from active snippets.
+	 */
+	private function register_custom_shortcodes() {
+		$all_snippets = $this->custom_snippets->get_all();
+
+		foreach ( $all_snippets as $snippet ) {
+			if ( empty( $snippet['shortcode_name'] ) ) {
+				continue;
+			}
+			if ( 'active' !== ( $snippet['status'] ?? '' ) ) {
+				continue;
+			}
+			if ( 'shortcode' !== ( $snippet['location'] ?? '' ) ) {
+				continue;
+			}
+
+			$name = sanitize_key( $snippet['shortcode_name'] );
+			if ( empty( $name ) || shortcode_exists( $name ) ) {
+				continue;
+			}
+
+			$snippet_id = $snippet['id'];
+			add_shortcode(
+				$name,
+				function () use ( $snippet_id ) {
+					return $this->render_shortcode( array( 'id' => $snippet_id ) );
+				}
+			);
+		}
 	}
 
 	/**
@@ -309,8 +367,24 @@ class SNDP_Executor {
 
 		$location = isset( $snippet['location'] ) ? $snippet['location'] : 'everywhere';
 
-		// Auto-insert locations are handled by their own hooks.
-		$auto_insert_locations = array( 'site_header', 'site_footer', 'before_content', 'after_content', 'shortcode' );
+		// Auto-insert locations are handled by their own hooks — skip during init execution.
+		$auto_insert_locations = array(
+			'site_header',
+			'site_footer',
+			'before_content',
+			'after_content',
+			'after_paragraph',
+			'body_open',
+			'shortcode',
+			'wc_before_shop_loop',
+			'wc_after_shop_loop',
+			'wc_before_single_product',
+			'wc_after_single_product',
+			'wc_before_cart',
+			'wc_before_checkout_form',
+			'wc_after_checkout_form',
+			'wc_thankyou',
+		);
 		if ( in_array( $location, $auto_insert_locations, true ) ) {
 			return false;
 		}
@@ -350,9 +424,14 @@ class SNDP_Executor {
 				return false;
 			}
 
-			if ( ! $this->check_taxonomy_condition( $snippet ) ) {
-				return false;
-			}
+		if ( ! $this->check_taxonomy_condition( $snippet ) ) {
+			return false;
+		}
+	}
+
+		// Evaluate conditional logic rules (Rule Builder).
+		if ( ! SNDP_Conditional_Logic::instance()->should_run( $snippet ) ) {
+			return false;
 		}
 
 		return true;
@@ -402,6 +481,11 @@ class SNDP_Executor {
 			return false;
 		}
 
+		// Evaluate conditional logic rules (Rule Builder).
+		if ( ! SNDP_Conditional_Logic::instance()->should_run( $snippet ) ) {
+			return false;
+		}
+
 		return true;
 	}
 
@@ -415,6 +499,15 @@ class SNDP_Executor {
 	}
 
 	/**
+	 * Execute snippets after body open (wp_body_open).
+	 *
+	 * @since 1.0.0
+	 */
+	public function execute_body_open_snippets() {
+		$this->execute_auto_insert_snippets( 'body_open' );
+	}
+
+	/**
 	 * Execute snippets in site footer (wp_footer).
 	 *
 	 * @since 1.0.0
@@ -424,22 +517,136 @@ class SNDP_Executor {
 	}
 
 	/**
-	 * Execute snippets before/after content.
+	 * Execute content filter snippets with paragraph insertion support.
 	 *
 	 * @since 1.0.0
 	 * @param string $content The post content.
 	 * @return string Modified content.
 	 */
 	public function execute_content_snippets( $content ) {
-		// Only run on single posts/pages in the main query.
 		if ( ! is_singular() || ! in_the_loop() || ! is_main_query() ) {
 			return $content;
 		}
 
-		$before = $this->get_auto_insert_output( 'before_content' );
-		$after  = $this->get_auto_insert_output( 'after_content' );
+		$before  = $this->get_auto_insert_output( 'before_content' );
+		$after   = $this->get_auto_insert_output( 'after_content' );
+		$content = $this->insert_after_paragraph( $content );
 
 		return $before . $content . $after;
+	}
+
+	/**
+	 * Insert snippets after a specific paragraph number.
+	 *
+	 * @since 1.0.0
+	 * @param string $content Post content.
+	 * @return string Modified content.
+	 */
+	private function insert_after_paragraph( $content ) {
+		if ( null === $this->active_custom_snippets_cache ) {
+			$this->active_custom_snippets_cache = $this->custom_snippets->get_active();
+		}
+
+		$insertions = array();
+		foreach ( $this->active_custom_snippets_cache as $snippet ) {
+			if ( 'after_paragraph' !== ( $snippet['location'] ?? '' ) ) {
+				continue;
+			}
+			if ( ! $this->should_run_auto_insert( $snippet ) ) {
+				continue;
+			}
+			$para_num = absint( $snippet['insert_paragraph'] ?? 2 );
+			if ( $para_num < 1 ) {
+				$para_num = 2;
+			}
+
+			$code      = isset( $snippet['code'] ) ? $snippet['code'] : '';
+			$code_type = isset( $snippet['code_type'] ) ? $snippet['code_type'] : 'php';
+			$sid       = isset( $snippet['id'] ) ? $snippet['id'] : '';
+
+			if ( empty( $code ) ) {
+				continue;
+			}
+
+			switch ( $code_type ) {
+				case 'php':
+					$output = $this->execute_php_and_capture( $sid, $code );
+					break;
+				case 'js':
+					$output = '<script>' . $code . '</script>';
+					break;
+				case 'css':
+					$output = '<style>' . $code . '</style>';
+					break;
+				case 'html':
+				default:
+					$output = $code;
+					break;
+			}
+
+			if ( '' !== $output ) {
+				if ( ! isset( $insertions[ $para_num ] ) ) {
+					$insertions[ $para_num ] = '';
+				}
+				$insertions[ $para_num ] .= $output;
+			}
+		}
+
+		if ( empty( $insertions ) ) {
+			return $content;
+		}
+
+		$paragraphs = explode( '</p>', $content );
+		$total      = count( $paragraphs );
+
+		foreach ( $insertions as $para_num => $output ) {
+			$idx = min( $para_num, $total ) - 1;
+			if ( $idx >= 0 && isset( $paragraphs[ $idx ] ) ) {
+				$paragraphs[ $idx ] .= $output;
+			}
+		}
+
+		return implode( '</p>', $paragraphs );
+	}
+
+	/** @since 1.0.0 */
+	public function execute_wc_before_shop_loop() {
+		$this->execute_auto_insert_snippets( 'wc_before_shop_loop' );
+	}
+
+	/** @since 1.0.0 */
+	public function execute_wc_after_shop_loop() {
+		$this->execute_auto_insert_snippets( 'wc_after_shop_loop' );
+	}
+
+	/** @since 1.0.0 */
+	public function execute_wc_before_single_product() {
+		$this->execute_auto_insert_snippets( 'wc_before_single_product' );
+	}
+
+	/** @since 1.0.0 */
+	public function execute_wc_after_single_product() {
+		$this->execute_auto_insert_snippets( 'wc_after_single_product' );
+	}
+
+	/** @since 1.0.0 */
+	public function execute_wc_before_cart() {
+		$this->execute_auto_insert_snippets( 'wc_before_cart' );
+	}
+
+	/** @since 1.0.0 */
+	public function execute_wc_before_checkout() {
+		$this->execute_auto_insert_snippets( 'wc_before_checkout_form' );
+	}
+
+	/** @since 1.0.0 */
+	public function execute_wc_after_checkout() {
+		$this->execute_auto_insert_snippets( 'wc_after_checkout_form' );
+	}
+
+	/** @since 1.0.0 */
+	public function execute_wc_thankyou() {
+		$this->execute_auto_insert_snippets( 'wc_thankyou' );
 	}
 
 	/**
@@ -1102,6 +1309,67 @@ class SNDP_Executor {
 		foreach ( $this->queued_html as $snippet_id => $html ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- HTML output from curated library snippets.
 			echo $html . "\n";
+		}
+	}
+
+	/**
+	 * Output global header scripts (wp_head).
+	 *
+	 * @since 1.0.0
+	 */
+	/**
+	 * Get global scripts option (cached per request).
+	 *
+	 * @since 1.0.0
+	 * @return array
+	 */
+	private function get_global_scripts() {
+		if ( null === $this->global_scripts_cache ) {
+			$this->global_scripts_cache = get_option( 'sndp_global_scripts', array() );
+		}
+		return $this->global_scripts_cache;
+	}
+
+	public function output_global_header_scripts() {
+		if ( $this->snippets->is_safe_mode() ) {
+			return;
+		}
+		$scripts = $this->get_global_scripts();
+		if ( ! empty( $scripts['header'] ) ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Raw script output configured by admin.
+			echo $scripts['header'] . "\n";
+		}
+	}
+
+	/**
+	 * Output global body open scripts (wp_body_open).
+	 *
+	 * @since 1.0.0
+	 */
+	public function output_global_body_scripts() {
+		if ( $this->snippets->is_safe_mode() ) {
+			return;
+		}
+		$scripts = $this->get_global_scripts();
+		if ( ! empty( $scripts['body_open'] ) ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Raw script output configured by admin.
+			echo $scripts['body_open'] . "\n";
+		}
+	}
+
+	/**
+	 * Output global footer scripts (wp_footer).
+	 *
+	 * @since 1.0.0
+	 */
+	public function output_global_footer_scripts() {
+		if ( $this->snippets->is_safe_mode() ) {
+			return;
+		}
+		$scripts = $this->get_global_scripts();
+		if ( ! empty( $scripts['footer'] ) ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Raw script output configured by admin.
+			echo $scripts['footer'] . "\n";
 		}
 	}
 }

@@ -24,8 +24,51 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<form method="post" action="">
 		<?php wp_nonce_field( 'sndp_settings_nonce', 'sndp_nonce' ); ?>
 
+		<?php $tm_enabled = SNDP_Testing_Mode::instance()->is_enabled(); ?>
+
 		<table class="form-table" role="presentation">
 			<tbody>
+				<tr>
+					<th scope="row">
+						<label for="sndp-testing-mode-toggle"><?php esc_html_e( 'Testing Mode', 'snipdrop' ); ?></label>
+					</th>
+					<td>
+						<label>
+							<input type="checkbox" id="sndp-testing-mode-toggle" value="1" <?php checked( $tm_enabled ); ?>>
+							<?php esc_html_e( 'Enable testing mode (stage changes before publishing)', 'snipdrop' ); ?>
+						</label>
+						<p class="description">
+							<?php esc_html_e( 'When enabled, all snippet changes are staged and only visible to admins. Visitors always see the live version. Publish or discard your changes when ready.', 'snipdrop' ); ?>
+						</p>
+						<?php if ( $tm_enabled ) : ?>
+							<?php
+							$tm_data = SNDP_Testing_Mode::instance()->get_data();
+							$tm_user = ! empty( $tm_data['enabled_by'] ) ? get_userdata( $tm_data['enabled_by'] ) : null;
+							$tm_date = ! empty( $tm_data['enabled_at'] ) ? date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), strtotime( $tm_data['enabled_at'] ) ) : '';
+							?>
+							<p class="description" style="color: #dba617; margin-top: 8px;">
+								<strong><?php esc_html_e( 'Active', 'snipdrop' ); ?></strong>
+								<?php
+								if ( $tm_date ) {
+									/* translators: 1: date/time, 2: user name */
+									printf( ' &mdash; ' . esc_html__( 'since %1$s by %2$s', 'snipdrop' ), esc_html( $tm_date ), esc_html( $tm_user ? $tm_user->display_name : __( 'Unknown', 'snipdrop' ) ) );
+								}
+								?>
+							</p>
+							<p style="margin-top: 8px;">
+								<button type="button" class="button button-small" id="sndp-tm-view-changes">
+									<?php esc_html_e( 'View Changes', 'snipdrop' ); ?>
+								</button>
+								<button type="button" class="button button-primary button-small" id="sndp-tm-publish">
+									<?php esc_html_e( 'Publish All', 'snipdrop' ); ?>
+								</button>
+								<button type="button" class="button button-link-delete button-small" id="sndp-tm-discard">
+									<?php esc_html_e( 'Discard All', 'snipdrop' ); ?>
+								</button>
+							</p>
+						<?php endif; ?>
+					</td>
+				</tr>
 				<tr>
 					<th scope="row">
 						<label for="sndp_safe_mode"><?php esc_html_e( 'Safe Mode', 'snipdrop' ); ?></label>

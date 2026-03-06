@@ -84,15 +84,29 @@ $defaults = array(
 	'page_ids'       => '',
 	'url_patterns'   => '',
 	'taxonomies'     => array(),
-	'schedule_start' => '',
-	'schedule_end'   => '',
+	'schedule_start'    => '',
+	'schedule_end'      => '',
+	'tags'              => array(),
+	'shortcode_name'    => '',
+	'insert_paragraph'  => 2,
 );
 
 $snippet = wp_parse_args( $snippet ? $snippet : array(), $defaults );
 
-// Get post types for dropdown.
+// Get post types for conditions.
 $post_types = get_post_types( array( 'public' => true ), 'objects' );
 unset( $post_types['attachment'] );
+
+// Determine if any conditions are set.
+$has_conditions = (
+	'all' !== $snippet['user_cond']
+	|| ! empty( $snippet['post_types'] )
+	|| '' !== $snippet['page_ids']
+	|| '' !== $snippet['url_patterns']
+	|| ! empty( $snippet['taxonomies'] )
+	|| '' !== $snippet['schedule_start']
+	|| '' !== $snippet['schedule_end']
+);
 ?>
 <div class="wrap sndp-wrap">
 	<h1 class="wp-heading-inline"><?php echo esc_html( $page_title ); ?></h1>
@@ -105,6 +119,7 @@ unset( $post_types['attachment'] );
 		<input type="hidden" name="id" id="sndp-snippet-id" value="<?php echo esc_attr( $snippet['id'] ); ?>">
 
 		<div class="sndp-form-columns">
+			<!-- ======================== MAIN AREA ======================== -->
 			<div class="sndp-form-main">
 				<!-- Title -->
 				<div class="sndp-form-field">
@@ -163,19 +178,282 @@ unset( $post_types['attachment'] );
 						<?php esc_html_e( 'Do not include opening PHP tags for PHP snippets.', 'snipdrop' ); ?>
 					</p>
 				</div>
+
+				<!-- ======================== CONDITIONAL LOGIC PANEL ======================== -->
+				<?php
+				$conditional_rules = isset( $snippet['conditional_rules'] ) ? $snippet['conditional_rules'] : array();
+				$has_new_rules     = ! empty( $conditional_rules ) && ! empty( $conditional_rules['enabled'] );
+				$panel_open        = $has_conditions || $has_new_rules;
+				?>
+				<div class="sndp-conditions-panel" id="sndp-conditions-panel">
+					<input type="hidden" id="sndp-conditional-rules" name="conditional_rules"
+						value="<?php echo esc_attr( ! empty( $conditional_rules ) ? wp_json_encode( $conditional_rules ) : '' ); ?>">
+
+					<div class="sndp-conditions-header">
+						<h3>
+							<span class="dashicons dashicons-filter"></span>
+							<?php esc_html_e( 'Smart Conditional Logic', 'snipdrop' ); ?>
+						</h3>
+						<label class="sndp-conditions-toggle">
+							<input type="checkbox" id="sndp-enable-conditions" <?php checked( $panel_open ); ?>>
+							<span><?php esc_html_e( 'Enable Logic', 'snipdrop' ); ?></span>
+						</label>
+					</div>
+					<div class="sndp-conditions-body" <?php echo $panel_open ? '' : 'style="display:none;"'; ?>>
+						<p class="sndp-conditions-intro">
+							<?php esc_html_e( 'Using conditional logic you can limit where and when this snippet runs.', 'snipdrop' ); ?>
+						</p>
+
+						<div class="sndp-conditions-grid">
+							<!-- User Condition -->
+							<div class="sndp-condition-section">
+								<h4><?php esc_html_e( 'User Condition', 'snipdrop' ); ?></h4>
+								<select name="user_cond" id="sndp-snippet-user-cond">
+									<option value="all" <?php selected( $snippet['user_cond'], 'all' ); ?>>
+										<?php esc_html_e( 'All Users', 'snipdrop' ); ?>
+									</option>
+									<option value="logged_in" <?php selected( $snippet['user_cond'], 'logged_in' ); ?>>
+										<?php esc_html_e( 'Logged In Only', 'snipdrop' ); ?>
+									</option>
+									<option value="logged_out" <?php selected( $snippet['user_cond'], 'logged_out' ); ?>>
+										<?php esc_html_e( 'Logged Out Only', 'snipdrop' ); ?>
+									</option>
+								</select>
+							</div>
+
+							<!-- Schedule -->
+							<?php
+							$start_date = '';
+							$start_time = '';
+							if ( ! empty( $snippet['schedule_start'] ) ) {
+								$parts      = explode( 'T', $snippet['schedule_start'] );
+								$start_date = $parts[0] ?? '';
+								$start_time = $parts[1] ?? '';
+							}
+							$end_date = '';
+							$end_time = '';
+							if ( ! empty( $snippet['schedule_end'] ) ) {
+								$parts    = explode( 'T', $snippet['schedule_end'] );
+								$end_date = $parts[0] ?? '';
+								$end_time = $parts[1] ?? '';
+							}
+							?>
+							<div class="sndp-condition-section">
+								<h4><?php esc_html_e( 'Schedule', 'snipdrop' ); ?></h4>
+								<div class="sndp-schedule-group">
+									<label class="sndp-schedule-label"><?php esc_html_e( 'Start', 'snipdrop' ); ?></label>
+									<div class="sndp-schedule-row">
+										<input type="text"
+											id="sndp-schedule-start-date"
+											class="sndp-schedule-date sndp-datepicker"
+											value="<?php echo esc_attr( $start_date ); ?>"
+											placeholder="<?php esc_attr_e( 'YYYY-MM-DD', 'snipdrop' ); ?>"
+											autocomplete="off">
+										<input type="text"
+											id="sndp-schedule-start-time"
+											class="sndp-schedule-time"
+											value="<?php echo esc_attr( $start_time ); ?>"
+											placeholder="00:00"
+											maxlength="5"
+											pattern="[0-2][0-9]:[0-5][0-9]">
+									</div>
+								</div>
+								<div class="sndp-schedule-group">
+									<label class="sndp-schedule-label"><?php esc_html_e( 'End', 'snipdrop' ); ?></label>
+									<div class="sndp-schedule-row">
+										<input type="text"
+											id="sndp-schedule-end-date"
+											class="sndp-datepicker sndp-schedule-date"
+											value="<?php echo esc_attr( $end_date ); ?>"
+											placeholder="<?php esc_attr_e( 'YYYY-MM-DD', 'snipdrop' ); ?>"
+											autocomplete="off">
+										<input type="text"
+											id="sndp-schedule-end-time"
+											class="sndp-schedule-time"
+											value="<?php echo esc_attr( $end_time ); ?>"
+											placeholder="23:59"
+											maxlength="5"
+											pattern="[0-2][0-9]:[0-5][0-9]">
+									</div>
+								</div>
+								<p class="description">
+									<?php
+									printf(
+										/* translators: %s: Site timezone string */
+										esc_html__( 'Timezone: %s', 'snipdrop' ),
+										'<code>' . esc_html( wp_timezone_string() ) . '</code>'
+									);
+									?>
+								</p>
+							</div>
+						</div>
+
+						<!-- Page Targeting (hidden for Admin Only location) -->
+						<div class="sndp-conditions-page-targeting sndp-frontend-only">
+							<h4><?php esc_html_e( 'Page Targeting', 'snipdrop' ); ?></h4>
+							<div class="sndp-conditions-grid">
+								<!-- Post Types -->
+								<div class="sndp-condition-section">
+									<label class="sndp-condition-label"><?php esc_html_e( 'Post Types', 'snipdrop' ); ?></label>
+									<div class="sndp-condition-checkboxes">
+										<?php foreach ( $post_types as $pt ) : ?>
+											<label class="sndp-checkbox-label">
+												<input type="checkbox"
+													name="post_types[]"
+													value="<?php echo esc_attr( $pt->name ); ?>"
+													<?php checked( in_array( $pt->name, (array) $snippet['post_types'], true ) ); ?>>
+												<?php echo esc_html( $pt->labels->singular_name ); ?>
+											</label>
+										<?php endforeach; ?>
+									</div>
+									<p class="description"><?php esc_html_e( 'Leave unchecked for all.', 'snipdrop' ); ?></p>
+								</div>
+
+								<!-- Specific Posts/Pages -->
+								<div class="sndp-condition-section">
+									<label class="sndp-condition-label"><?php esc_html_e( 'Specific Posts / Pages', 'snipdrop' ); ?></label>
+									<div class="sndp-page-picker">
+										<input type="text"
+											id="sndp-page-search"
+											class="regular-text"
+											placeholder="<?php esc_attr_e( 'Search posts and pages...', 'snipdrop' ); ?>"
+											autocomplete="off">
+										<div id="sndp-page-search-results" class="sndp-page-search-results"></div>
+										<div id="sndp-selected-pages" class="sndp-selected-pages">
+											<?php
+											$saved_ids = array_filter( array_map( 'absint', explode( ',', $snippet['page_ids'] ) ) );
+											foreach ( $saved_ids as $pid ) :
+												$post_obj = get_post( $pid );
+												if ( ! $post_obj ) {
+													continue;
+												}
+												?>
+												<span class="sndp-page-tag" data-id="<?php echo esc_attr( $pid ); ?>">
+													<?php echo esc_html( $post_obj->post_title ); ?>
+													<span class="sndp-page-tag-type"><?php echo esc_html( get_post_type_object( $post_obj->post_type )->labels->singular_name ); ?></span>
+													<button type="button" class="sndp-page-tag-remove">&times;</button>
+												</span>
+											<?php endforeach; ?>
+										</div>
+										<input type="hidden"
+											name="page_ids"
+											id="sndp-snippet-page-ids"
+											value="<?php echo esc_attr( $snippet['page_ids'] ); ?>">
+									</div>
+								</div>
+							</div>
+
+							<div class="sndp-conditions-grid">
+								<!-- URL Patterns -->
+								<div class="sndp-condition-section">
+									<label class="sndp-condition-label"><?php esc_html_e( 'URL Patterns', 'snipdrop' ); ?></label>
+									<textarea name="url_patterns"
+										id="sndp-snippet-url-patterns"
+										rows="3"
+										placeholder="<?php esc_attr_e( '/shop/*&#10;/checkout&#10;/my-account/*', 'snipdrop' ); ?>"><?php echo esc_textarea( $snippet['url_patterns'] ); ?></textarea>
+									<p class="description"><?php esc_html_e( 'One per line, * as wildcard.', 'snipdrop' ); ?></p>
+								</div>
+
+								<!-- Taxonomy Terms -->
+								<div class="sndp-condition-section">
+									<label class="sndp-condition-label"><?php esc_html_e( 'Taxonomy Terms', 'snipdrop' ); ?></label>
+									<?php
+									/**
+									 * Available public taxonomies.
+									 *
+									 * @var array<string, WP_Taxonomy> $available_taxonomies
+									 */
+									$available_taxonomies = get_taxonomies(
+										array(
+											'public'  => true,
+											'show_ui' => true,
+										),
+										'objects'
+									);
+									unset( $available_taxonomies['post_format'] );
+
+									$saved_taxonomies = (array) $snippet['taxonomies'];
+
+									$label_counts = array();
+									foreach ( $available_taxonomies as $sndp_tax ) {
+										$name                  = $sndp_tax->labels->singular_name;
+										$label_counts[ $name ] = isset( $label_counts[ $name ] ) ? $label_counts[ $name ] + 1 : 1;
+									}
+
+									foreach ( $available_taxonomies as $sndp_tax ) :
+										$sndp_terms = get_terms(
+											array(
+												'taxonomy'   => $sndp_tax->name,
+												'hide_empty' => true,
+												'number'     => 100,
+												'orderby'    => 'name',
+												'order'      => 'ASC',
+											)
+										);
+
+										if ( empty( $sndp_terms ) || is_wp_error( $sndp_terms ) ) {
+											continue;
+										}
+
+										$tax_label = $sndp_tax->labels->singular_name;
+										if ( $label_counts[ $tax_label ] > 1 ) {
+											$object_types = $sndp_tax->object_type;
+											if ( ! empty( $object_types ) ) {
+												$pt_obj    = get_post_type_object( $object_types[0] );
+												$pt_name   = $pt_obj ? $pt_obj->labels->singular_name : $object_types[0];
+												$tax_label = sprintf( '%s (%s)', $tax_label, $pt_name );
+											}
+										}
+
+										$is_hierarchical = is_taxonomy_hierarchical( $sndp_tax->name );
+										?>
+										<div class="sndp-taxonomy-group">
+											<label class="sndp-taxonomy-label"><?php echo esc_html( $tax_label ); ?></label>
+											<div class="sndp-taxonomy-checklist-wrap">
+												<ul class="sndp-taxonomy-checklist">
+													<?php
+													if ( $is_hierarchical ) {
+														sndp_render_term_checklist_tree( $sndp_terms, $sndp_tax->name, $saved_taxonomies );
+													} else {
+														foreach ( $sndp_terms as $sndp_term ) :
+															$value   = $sndp_tax->name . ':' . $sndp_term->slug;
+															$checked = in_array( $value, $saved_taxonomies, true );
+															?>
+															<li>
+																<label>
+																	<input type="checkbox"
+																		name="taxonomies[]"
+																		value="<?php echo esc_attr( $value ); ?>"
+																		<?php checked( $checked ); ?>>
+																	<?php echo esc_html( $sndp_term->name ); ?>
+																</label>
+															</li>
+															<?php
+														endforeach;
+													}
+													?>
+												</ul>
+											</div>
+										</div>
+									<?php endforeach; ?>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+
 			</div>
 
+			<!-- ======================== SIDEBAR ======================== -->
 			<div class="sndp-form-sidebar">
-				<!-- Actions (Primary) -->
+				<!-- Actions -->
 				<div class="sndp-metabox sndp-metabox-actions">
 					<button type="submit" class="button button-primary button-large sndp-save-snippet">
 						<?php echo esc_html( $button_text ); ?>
 					</button>
-					<?php if ( $is_editing ) : ?>
-						<button type="button" class="button sndp-save-activate-snippet">
-							<?php esc_html_e( 'Save & Activate', 'snipdrop' ); ?>
-						</button>
-					<?php endif; ?>
+					<button type="button" class="button sndp-save-activate-snippet">
+						<?php esc_html_e( 'Save & Activate', 'snipdrop' ); ?>
+					</button>
 				</div>
 
 				<!-- Status -->
@@ -192,6 +470,30 @@ unset( $post_types['attachment'] );
 						<p class="description">
 							<?php esc_html_e( 'Enable to run this snippet on your site.', 'snipdrop' ); ?>
 						</p>
+
+						<?php
+						$tm_instance = SNDP_Testing_Mode::instance();
+						$tm_active   = $tm_instance->is_enabled();
+						?>
+						<div class="sndp-testing-mode-status <?php echo $tm_active ? 'is-active' : ''; ?>">
+							<label>
+								<input type="checkbox"
+									class="sndp-testing-mode-toggle"
+									value="1"
+									<?php checked( $tm_active ); ?>>
+								<span><?php esc_html_e( 'Testing Mode', 'snipdrop' ); ?></span>
+							</label>
+							<p class="description">
+								<?php
+								if ( $tm_active ) {
+									esc_html_e( 'Active — changes are staged, not live.', 'snipdrop' );
+								} else {
+									esc_html_e( 'Stage changes before publishing.', 'snipdrop' );
+								}
+								?>
+							</p>
+						</div>
+
 						<?php if ( $is_editing ) : ?>
 							<div class="sndp-snippet-meta">
 								<?php if ( ! empty( $snippet['created_at'] ) ) : ?>
@@ -270,6 +572,9 @@ unset( $post_types['attachment'] );
 								<option value="site_header" <?php selected( $snippet['location'], 'site_header' ); ?>>
 									<?php esc_html_e( 'Site Header (wp_head)', 'snipdrop' ); ?>
 								</option>
+								<option value="body_open" <?php selected( $snippet['location'], 'body_open' ); ?>>
+									<?php esc_html_e( 'After Body Open (wp_body_open)', 'snipdrop' ); ?>
+								</option>
 								<option value="site_footer" <?php selected( $snippet['location'], 'site_footer' ); ?>>
 									<?php esc_html_e( 'Site Footer (wp_footer)', 'snipdrop' ); ?>
 								</option>
@@ -279,341 +584,82 @@ unset( $post_types['attachment'] );
 								<option value="after_content" <?php selected( $snippet['location'], 'after_content' ); ?>>
 									<?php esc_html_e( 'After Post Content', 'snipdrop' ); ?>
 								</option>
+								<option value="after_paragraph" <?php selected( $snippet['location'], 'after_paragraph' ); ?>>
+									<?php esc_html_e( 'After Paragraph #', 'snipdrop' ); ?>
+								</option>
 							</optgroup>
+							<?php if ( class_exists( 'WooCommerce' ) ) : ?>
+							<optgroup label="<?php esc_attr_e( 'WooCommerce', 'snipdrop' ); ?>">
+								<option value="wc_before_shop_loop" <?php selected( $snippet['location'], 'wc_before_shop_loop' ); ?>>
+									<?php esc_html_e( 'Before Shop Loop', 'snipdrop' ); ?>
+								</option>
+								<option value="wc_after_shop_loop" <?php selected( $snippet['location'], 'wc_after_shop_loop' ); ?>>
+									<?php esc_html_e( 'After Shop Loop', 'snipdrop' ); ?>
+								</option>
+								<option value="wc_before_single_product" <?php selected( $snippet['location'], 'wc_before_single_product' ); ?>>
+									<?php esc_html_e( 'Before Single Product', 'snipdrop' ); ?>
+								</option>
+								<option value="wc_after_single_product" <?php selected( $snippet['location'], 'wc_after_single_product' ); ?>>
+									<?php esc_html_e( 'After Single Product', 'snipdrop' ); ?>
+								</option>
+								<option value="wc_before_cart" <?php selected( $snippet['location'], 'wc_before_cart' ); ?>>
+									<?php esc_html_e( 'Before Cart', 'snipdrop' ); ?>
+								</option>
+								<option value="wc_before_checkout_form" <?php selected( $snippet['location'], 'wc_before_checkout_form' ); ?>>
+									<?php esc_html_e( 'Before Checkout Form', 'snipdrop' ); ?>
+								</option>
+								<option value="wc_after_checkout_form" <?php selected( $snippet['location'], 'wc_after_checkout_form' ); ?>>
+									<?php esc_html_e( 'After Checkout Form', 'snipdrop' ); ?>
+								</option>
+								<option value="wc_thankyou" <?php selected( $snippet['location'], 'wc_thankyou' ); ?>>
+									<?php esc_html_e( 'Order Thank You Page', 'snipdrop' ); ?>
+								</option>
+							</optgroup>
+							<?php endif; ?>
 							<optgroup label="<?php esc_attr_e( 'Manual', 'snipdrop' ); ?>">
 								<option value="shortcode" <?php selected( $snippet['location'], 'shortcode' ); ?>>
 									<?php esc_html_e( 'Shortcode Only', 'snipdrop' ); ?>
 								</option>
 							</optgroup>
 						</select>
-						<p class="description sndp-shortcode-hint <?php echo ( 'shortcode' === $snippet['location'] && ! empty( $snippet['id'] ) ) ? '' : 'hidden'; ?>" id="sndp-shortcode-hint">
-							<?php esc_html_e( 'Use shortcode:', 'snipdrop' ); ?>
-							<code id="sndp-shortcode-code">[snipdrop id="<?php echo esc_attr( $snippet['id'] ); ?>"]</code>
-							<button type="button" class="button button-small sndp-copy-shortcode" title="<?php esc_attr_e( 'Copy shortcode', 'snipdrop' ); ?>">
-								<span class="dashicons dashicons-clipboard"></span>
-							</button>
-						</p>
-					</div>
-				</div>
-
-				<!-- User Condition -->
-				<div class="sndp-metabox sndp-conditional-options">
-					<h3>
-						<?php esc_html_e( 'User Condition', 'snipdrop' ); ?>
-						<span class="sndp-help-tip" data-tip="<?php esc_attr_e( 'Restrict this snippet to logged-in users, logged-out users, or run for everyone.', 'snipdrop' ); ?>">?</span>
-					</h3>
-					<div class="sndp-metabox-content">
-						<select name="user_cond" id="sndp-snippet-user-cond">
-							<option value="all" <?php selected( $snippet['user_cond'], 'all' ); ?>>
-								<?php esc_html_e( 'All Users', 'snipdrop' ); ?>
-							</option>
-							<option value="logged_in" <?php selected( $snippet['user_cond'], 'logged_in' ); ?>>
-								<?php esc_html_e( 'Logged In Only', 'snipdrop' ); ?>
-							</option>
-							<option value="logged_out" <?php selected( $snippet['user_cond'], 'logged_out' ); ?>>
-								<?php esc_html_e( 'Logged Out Only', 'snipdrop' ); ?>
-							</option>
-						</select>
-						<p class="description">
-							<?php esc_html_e( 'Run this snippet for specific user states.', 'snipdrop' ); ?>
-						</p>
-					</div>
-				</div>
-
-				<!-- Date/Time Schedule -->
-				<?php
-				$start_date = '';
-				$start_time = '';
-				if ( ! empty( $snippet['schedule_start'] ) ) {
-					$parts      = explode( 'T', $snippet['schedule_start'] );
-					$start_date = $parts[0] ?? '';
-					$start_time = $parts[1] ?? '';
-				}
-				$end_date = '';
-				$end_time = '';
-				if ( ! empty( $snippet['schedule_end'] ) ) {
-					$parts    = explode( 'T', $snippet['schedule_end'] );
-					$end_date = $parts[0] ?? '';
-					$end_time = $parts[1] ?? '';
-				}
-				?>
-				<div class="sndp-metabox sndp-conditional-options">
-					<h3>
-						<?php esc_html_e( 'Schedule', 'snipdrop' ); ?>
-						<span class="sndp-help-tip" data-tip="<?php esc_attr_e( 'Set a date range for when this snippet should be active. Uses your site timezone. Leave both empty to run always.', 'snipdrop' ); ?>">?</span>
-					</h3>
-					<div class="sndp-metabox-content">
-						<div class="sndp-schedule-group">
-							<label class="sndp-schedule-label"><?php esc_html_e( 'Start', 'snipdrop' ); ?></label>
-							<div class="sndp-schedule-row">
-								<input type="text"
-									id="sndp-schedule-start-date"
-									class="sndp-schedule-date sndp-datepicker"
-									value="<?php echo esc_attr( $start_date ); ?>"
-									placeholder="<?php esc_attr_e( 'YYYY-MM-DD', 'snipdrop' ); ?>"
-									autocomplete="off">
-								<input type="text"
-									id="sndp-schedule-start-time"
-									class="sndp-schedule-time"
-									value="<?php echo esc_attr( $start_time ); ?>"
-									placeholder="00:00"
-									maxlength="5"
-									pattern="[0-2][0-9]:[0-5][0-9]">
-							</div>
-						</div>
-						<div class="sndp-schedule-group">
-							<label class="sndp-schedule-label"><?php esc_html_e( 'End', 'snipdrop' ); ?></label>
-							<div class="sndp-schedule-row">
-								<input type="text"
-									id="sndp-schedule-end-date"
-									class="sndp-datepicker sndp-schedule-date"
-									value="<?php echo esc_attr( $end_date ); ?>"
-									placeholder="<?php esc_attr_e( 'YYYY-MM-DD', 'snipdrop' ); ?>"
-									autocomplete="off">
-								<input type="text"
-									id="sndp-schedule-end-time"
-									class="sndp-schedule-time"
-									value="<?php echo esc_attr( $end_time ); ?>"
-									placeholder="23:59"
-									maxlength="5"
-									pattern="[0-2][0-9]:[0-5][0-9]">
-							</div>
-						</div>
-						<p class="description">
-							<?php
-							printf(
-								/* translators: %s: Site timezone string */
-								esc_html__( '24-hour time (e.g. 14:30 = 2:30 PM). Timezone: %s. Leave empty to run always.', 'snipdrop' ),
-								'<code>' . esc_html( wp_timezone_string() ) . '</code>'
-							);
-							?>
-						</p>
-					</div>
-				</div>
-
-				<!-- Post Types -->
-				<div class="sndp-metabox sndp-conditional-options sndp-frontend-only">
-					<h3><?php esc_html_e( 'Post Types', 'snipdrop' ); ?></h3>
-					<div class="sndp-metabox-content">
-						<p class="description sndp-no-margin-top">
-							<?php esc_html_e( 'Leave unchecked to run on all post types.', 'snipdrop' ); ?>
-						</p>
-						<?php foreach ( $post_types as $pt ) : ?>
-							<label class="sndp-checkbox-label">
-								<input type="checkbox"
-									name="post_types[]"
-									value="<?php echo esc_attr( $pt->name ); ?>"
-									<?php checked( in_array( $pt->name, (array) $snippet['post_types'], true ) ); ?>>
-								<?php echo esc_html( $pt->labels->singular_name ); ?>
-							</label>
-						<?php endforeach; ?>
-					</div>
-				</div>
-
-				<!-- Specific Posts/Pages -->
-				<div class="sndp-metabox sndp-conditional-options sndp-frontend-only">
-					<h3>
-						<?php esc_html_e( 'Specific Posts / Pages', 'snipdrop' ); ?>
-						<span class="sndp-help-tip" data-tip="<?php esc_attr_e( 'Search and select specific posts or pages where this snippet should run. Leave empty to run on all content.', 'snipdrop' ); ?>">?</span>
-					</h3>
-					<div class="sndp-metabox-content">
-						<div class="sndp-page-picker">
-							<input type="text"
-								id="sndp-page-search"
-								class="regular-text"
-								placeholder="<?php esc_attr_e( 'Search posts and pages...', 'snipdrop' ); ?>"
-								autocomplete="off">
-							<div id="sndp-page-search-results" class="sndp-page-search-results"></div>
-							<div id="sndp-selected-pages" class="sndp-selected-pages">
-								<?php
-								$saved_ids = array_filter( array_map( 'absint', explode( ',', $snippet['page_ids'] ) ) );
-								foreach ( $saved_ids as $pid ) :
-									$post_obj = get_post( $pid );
-									if ( ! $post_obj ) {
-										continue;
-									}
-									?>
-									<span class="sndp-page-tag" data-id="<?php echo esc_attr( $pid ); ?>">
-										<?php echo esc_html( $post_obj->post_title ); ?>
-										<span class="sndp-page-tag-type"><?php echo esc_html( get_post_type_object( $post_obj->post_type )->labels->singular_name ); ?></span>
-										<button type="button" class="sndp-page-tag-remove">&times;</button>
-									</span>
-								<?php endforeach; ?>
-							</div>
-							<input type="hidden"
-								name="page_ids"
-								id="sndp-snippet-page-ids"
-								value="<?php echo esc_attr( $snippet['page_ids'] ); ?>">
-						</div>
-						<p class="description">
-							<?php esc_html_e( 'Leave empty to run on all posts and pages.', 'snipdrop' ); ?>
-						</p>
-					</div>
-				</div>
-
-				<!-- URL Patterns -->
-				<div class="sndp-metabox sndp-conditional-options sndp-frontend-only">
-					<h3>
-						<?php esc_html_e( 'URL Patterns', 'snipdrop' ); ?>
-						<span class="sndp-help-tip" data-tip="<?php esc_attr_e( 'Run this snippet only on URLs matching these patterns. Use * as wildcard. One pattern per line. Example: /shop/*, /checkout, /my-account/*', 'snipdrop' ); ?>">?</span>
-					</h3>
-					<div class="sndp-metabox-content">
-						<textarea name="url_patterns"
-							id="sndp-snippet-url-patterns"
-							rows="3"
-							placeholder="<?php esc_attr_e( '/shop/*&#10;/checkout&#10;/my-account/*', 'snipdrop' ); ?>"><?php echo esc_textarea( $snippet['url_patterns'] ); ?></textarea>
-						<p class="description">
-							<?php esc_html_e( 'One pattern per line. Use * as wildcard. Leave empty to run on all URLs.', 'snipdrop' ); ?>
-						</p>
-					</div>
-				</div>
-
-				<!-- Taxonomy Conditions -->
-				<div class="sndp-metabox sndp-conditional-options sndp-frontend-only">
-					<h3>
-						<?php esc_html_e( 'Taxonomy Terms', 'snipdrop' ); ?>
-						<span class="sndp-help-tip" data-tip="<?php esc_attr_e( 'Run this snippet only when the current post belongs to specific categories, tags, or custom taxonomy terms.', 'snipdrop' ); ?>">?</span>
-					</h3>
-					<div class="sndp-metabox-content">
-						<?php
-						/**
-						 * Available public taxonomies.
-						 *
-						 * @var array<string, WP_Taxonomy> $available_taxonomies
-						 */
-						$available_taxonomies = get_taxonomies(
-							array(
-								'public'  => true,
-								'show_ui' => true,
-							),
-							'objects'
-						);
-						unset( $available_taxonomies['post_format'] );
-
-						$saved_taxonomies = (array) $snippet['taxonomies'];
-
-						// Build unique labels — append object type when names collide.
-						$label_counts = array();
-						foreach ( $available_taxonomies as $sndp_tax ) {
-							$name                  = $sndp_tax->labels->singular_name;
-							$label_counts[ $name ] = isset( $label_counts[ $name ] ) ? $label_counts[ $name ] + 1 : 1;
-						}
-
-						foreach ( $available_taxonomies as $sndp_tax ) :
-							$sndp_terms = get_terms(
-								array(
-									'taxonomy'   => $sndp_tax->name,
-									'hide_empty' => true,
-									'number'     => 100,
-									'orderby'    => 'name',
-									'order'      => 'ASC',
-								)
-							);
-
-							if ( empty( $sndp_terms ) || is_wp_error( $sndp_terms ) ) {
-								continue;
-							}
-
-							$tax_label = $sndp_tax->labels->singular_name;
-							if ( $label_counts[ $tax_label ] > 1 ) {
-								$object_types = $sndp_tax->object_type;
-								if ( ! empty( $object_types ) ) {
-									$pt_obj    = get_post_type_object( $object_types[0] );
-									$pt_name   = $pt_obj ? $pt_obj->labels->singular_name : $object_types[0];
-									$tax_label = sprintf( '%s (%s)', $tax_label, $pt_name );
-								}
-							}
-
-							$is_hierarchical = is_taxonomy_hierarchical( $sndp_tax->name );
-							?>
-							<div class="sndp-taxonomy-group">
-								<label class="sndp-taxonomy-label"><?php echo esc_html( $tax_label ); ?></label>
-								<div class="sndp-taxonomy-checklist-wrap">
-									<ul class="sndp-taxonomy-checklist">
-										<?php
-										if ( $is_hierarchical ) {
-											sndp_render_term_checklist_tree( $sndp_terms, $sndp_tax->name, $saved_taxonomies );
-										} else {
-											foreach ( $sndp_terms as $sndp_term ) :
-												$value   = $sndp_tax->name . ':' . $sndp_term->slug;
-												$checked = in_array( $value, $saved_taxonomies, true );
-												?>
-												<li>
-													<label>
-														<input type="checkbox"
-															name="taxonomies[]"
-															value="<?php echo esc_attr( $value ); ?>"
-															<?php checked( $checked ); ?>>
-														<?php echo esc_html( $sndp_term->name ); ?>
-													</label>
-												</li>
-												<?php
-											endforeach;
-										}
-										?>
-									</ul>
+						<div class="sndp-shortcode-hint <?php echo ( 'shortcode' === $snippet['location'] && ! empty( $snippet['id'] ) ) ? '' : 'hidden'; ?>" id="sndp-shortcode-hint">
+							<p class="description">
+								<?php esc_html_e( 'Default shortcode:', 'snipdrop' ); ?>
+								<code id="sndp-shortcode-code">[snipdrop id="<?php echo esc_attr( $snippet['id'] ); ?>"]</code>
+								<button type="button" class="button button-small sndp-copy-shortcode" title="<?php esc_attr_e( 'Copy shortcode', 'snipdrop' ); ?>">
+									<span class="dashicons dashicons-clipboard"></span>
+								</button>
+							</p>
+							<div class="sndp-shortcode-name-field">
+								<label for="sndp-shortcode-name"><?php esc_html_e( 'Custom shortcode name:', 'snipdrop' ); ?></label>
+								<div class="sndp-shortcode-name-wrap">
+									<span class="sndp-shortcode-prefix">[</span>
+									<input type="text"
+										id="sndp-shortcode-name"
+										name="shortcode_name"
+										value="<?php echo esc_attr( isset( $snippet['shortcode_name'] ) ? $snippet['shortcode_name'] : '' ); ?>"
+										placeholder="<?php esc_attr_e( 'my-snippet', 'snipdrop' ); ?>"
+										pattern="[a-z0-9_\-]+"
+										class="regular-text">
+									<span class="sndp-shortcode-suffix">]</span>
 								</div>
+								<p class="description"><?php esc_html_e( 'Optional. Lowercase letters, numbers, hyphens, underscores only.', 'snipdrop' ); ?></p>
 							</div>
-						<?php endforeach; ?>
-						<p class="description">
-							<?php esc_html_e( 'Leave all unchecked to run on all content.', 'snipdrop' ); ?>
-						</p>
+						</div>
+						<div class="sndp-paragraph-hint <?php echo ( 'after_paragraph' === $snippet['location'] ) ? '' : 'hidden'; ?>" id="sndp-paragraph-hint">
+							<label for="sndp-insert-paragraph"><?php esc_html_e( 'Insert after paragraph:', 'snipdrop' ); ?></label>
+							<input type="number"
+								id="sndp-insert-paragraph"
+								name="insert_paragraph"
+								value="<?php echo esc_attr( $snippet['insert_paragraph'] ); ?>"
+								min="1"
+								max="100"
+								class="small-text">
+						</div>
 					</div>
 				</div>
 
-				<!-- Revisions -->
-				<?php
-				if ( $is_editing ) :
-					$revisions = SNDP_Custom_Snippets::instance()->get_revisions( $snippet['id'] );
-					if ( ! empty( $revisions ) ) :
-						?>
-						<div class="sndp-metabox">
-							<h3>
-								<?php esc_html_e( 'Revision History', 'snipdrop' ); ?>
-								<span class="sndp-help-tip" data-tip="<?php esc_attr_e( 'Previous versions of this snippet are saved automatically. Click Restore to revert to that version.', 'snipdrop' ); ?>">?</span>
-							</h3>
-							<div class="sndp-metabox-content sndp-revisions-list">
-								<?php
-								foreach ( $revisions as $idx => $rev ) :
-									$rev_user = '';
-									if ( ! empty( $rev['user'] ) ) {
-										$u = get_userdata( $rev['user'] );
-										if ( $u ) {
-											$rev_user = $u->display_name;
-										}
-									}
-									$rev_date_display = date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), strtotime( $rev['date'] ) );
-									?>
-									<div class="sndp-revision-item">
-										<span class="sndp-revision-date">
-											<?php echo esc_html( $rev_date_display ); ?>
-											<?php if ( $rev_user ) : ?>
-												<em><?php echo esc_html( $rev_user ); ?></em>
-											<?php endif; ?>
-										</span>
-										<span class="sndp-revision-actions">
-											<button type="button"
-												class="button button-small sndp-view-diff"
-												<?php // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Encoding snippet code for safe HTML attribute transport to JS diff viewer. ?>
-												data-revision-code="<?php echo esc_attr( base64_encode( $rev['code'] ) ); ?>"
-												data-revision-date="<?php echo esc_attr( $rev_date_display ); ?>">
-												<?php esc_html_e( 'View Changes', 'snipdrop' ); ?>
-											</button>
-											<button type="button"
-												class="button button-small sndp-restore-revision"
-												data-snippet-id="<?php echo esc_attr( $snippet['id'] ); ?>"
-												data-revision-index="<?php echo esc_attr( $idx ); ?>">
-												<?php esc_html_e( 'Restore', 'snipdrop' ); ?>
-											</button>
-										</span>
-									</div>
-								<?php endforeach; ?>
-							</div>
-						</div>
-					<?php endif; ?>
-				<?php endif; ?>
-
-				<!-- Hook (for PHP) -->
+				<!-- Execution (PHP only) -->
 				<div class="sndp-metabox sndp-php-options">
 					<h3>
 						<?php esc_html_e( 'Execution', 'snipdrop' ); ?>
@@ -643,6 +689,98 @@ unset( $post_types['attachment'] );
 						</div>
 					</div>
 				</div>
+
+				<!-- Tags -->
+				<div class="sndp-metabox">
+					<h3><?php esc_html_e( 'Tags', 'snipdrop' ); ?></h3>
+					<div class="sndp-metabox-content">
+						<input type="text"
+							id="sndp-snippet-tags"
+							name="tags"
+							class="large-text"
+							value="<?php echo esc_attr( implode( ', ', (array) $snippet['tags'] ) ); ?>"
+							placeholder="<?php esc_attr_e( 'e.g. woocommerce, checkout, custom', 'snipdrop' ); ?>">
+						<p class="description">
+							<?php esc_html_e( 'Comma-separated tags to organize your snippets.', 'snipdrop' ); ?>
+						</p>
+					</div>
+				</div>
+
+				<!-- Revisions -->
+				<?php
+				if ( $is_editing ) :
+					$revisions = SNDP_Custom_Snippets::instance()->get_revisions( $snippet['id'] );
+					if ( ! empty( $revisions ) ) :
+						?>
+						<div class="sndp-metabox">
+							<h3>
+								<?php esc_html_e( 'Revision History', 'snipdrop' ); ?>
+								<span class="sndp-help-tip" data-tip="<?php esc_attr_e( 'Previous versions of this snippet are saved automatically when you make changes. Click Restore to revert.', 'snipdrop' ); ?>">?</span>
+							</h3>
+							<div class="sndp-metabox-content sndp-revisions-list">
+								<?php
+								foreach ( $revisions as $idx => $rev ) :
+									$rev_user = '';
+									if ( ! empty( $rev['user'] ) ) {
+										$u = get_userdata( $rev['user'] );
+										if ( $u ) {
+											$rev_user = $u->display_name;
+										}
+									}
+									$rev_date_display = date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), strtotime( $rev['date'] ) );
+
+									// Build a summary of what changed.
+									$changed_fields = array();
+									$compare_map    = array(
+										'code'        => __( 'Code', 'snipdrop' ),
+										'title'       => __( 'Title', 'snipdrop' ),
+										'description' => __( 'Description', 'snipdrop' ),
+										'code_type'   => __( 'Type', 'snipdrop' ),
+										'location'    => __( 'Location', 'snipdrop' ),
+										'hook'        => __( 'Hook', 'snipdrop' ),
+										'priority'    => __( 'Priority', 'snipdrop' ),
+									);
+									foreach ( $compare_map as $field => $label ) {
+										if ( isset( $rev[ $field ] ) && ( $rev[ $field ] ?? '' ) !== ( $snippet[ $field ] ?? '' ) ) {
+											$changed_fields[] = $label;
+										}
+									}
+
+									$rev_code = isset( $rev['code'] ) ? $rev['code'] : '';
+									?>
+									<div class="sndp-revision-item">
+										<span class="sndp-revision-date">
+											<?php echo esc_html( $rev_date_display ); ?>
+											<?php if ( $rev_user ) : ?>
+												<em><?php echo esc_html( $rev_user ); ?></em>
+											<?php endif; ?>
+											<?php if ( ! empty( $changed_fields ) ) : ?>
+												<span class="sndp-revision-changes">&mdash; <?php echo esc_html( implode( ', ', $changed_fields ) ); ?></span>
+											<?php endif; ?>
+										</span>
+										<span class="sndp-revision-actions">
+											<?php if ( $rev_code ) : ?>
+											<button type="button"
+												class="button button-small sndp-view-diff"
+												<?php // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Encoding snippet code for safe HTML attribute transport to JS diff viewer. ?>
+												data-revision-code="<?php echo esc_attr( base64_encode( $rev_code ) ); ?>"
+												data-revision-date="<?php echo esc_attr( $rev_date_display ); ?>">
+												<?php esc_html_e( 'View Diff', 'snipdrop' ); ?>
+											</button>
+											<?php endif; ?>
+											<button type="button"
+												class="button button-small sndp-restore-revision"
+												data-snippet-id="<?php echo esc_attr( $snippet['id'] ); ?>"
+												data-revision-index="<?php echo esc_attr( $idx ); ?>">
+												<?php esc_html_e( 'Restore', 'snipdrop' ); ?>
+											</button>
+										</span>
+									</div>
+								<?php endforeach; ?>
+							</div>
+						</div>
+					<?php endif; ?>
+				<?php endif; ?>
 			</div>
 		</div>
 	</form>

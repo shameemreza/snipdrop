@@ -93,10 +93,14 @@ final class SnipDrop {
 		require_once SNDP_PLUGIN_DIR . 'includes/class-sndp-error-handler.php';
 		require_once SNDP_PLUGIN_DIR . 'includes/class-sndp-compatibility.php';
 		require_once SNDP_PLUGIN_DIR . 'includes/class-sndp-conflicts.php';
+		require_once SNDP_PLUGIN_DIR . 'includes/class-sndp-conditional-logic.php';
+		require_once SNDP_PLUGIN_DIR . 'includes/class-sndp-testing-mode.php';
+		require_once SNDP_PLUGIN_DIR . 'includes/class-sndp-activity-log.php';
 
 		// Admin classes.
 		if ( is_admin() ) {
 			require_once SNDP_PLUGIN_DIR . 'includes/admin/class-sndp-admin.php';
+			require_once SNDP_PLUGIN_DIR . 'includes/admin/class-sndp-importer.php';
 		}
 	}
 
@@ -166,6 +170,12 @@ final class SnipDrop {
 		// Initialize library.
 		SNDP_Library::instance();
 
+		// Initialize activity log.
+		SNDP_Activity_Log::instance();
+
+		// Initialize testing mode (must run before executor so filters are in place).
+		SNDP_Testing_Mode::instance();
+
 		// Initialize snippet executor.
 		SNDP_Executor::instance();
 
@@ -175,6 +185,7 @@ final class SnipDrop {
 		// Initialize admin.
 		if ( is_admin() ) {
 			SNDP_Admin::instance();
+			SNDP_Importer::instance();
 		}
 	}
 

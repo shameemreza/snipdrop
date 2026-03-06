@@ -35,6 +35,13 @@ class SNDP_Custom_Snippets {
 	private $option_name = 'sndp_custom_snippets';
 
 	/**
+	 * Instance-level cache for get_all() to avoid repeated deserialization.
+	 *
+	 * @var array|null
+	 */
+	private $snippets_cache = null;
+
+	/**
 	 * Option name for storing snippet revisions.
 	 *
 	 * @var string
@@ -77,7 +84,19 @@ class SNDP_Custom_Snippets {
 	 * @return array
 	 */
 	public function get_all() {
-		return get_option( $this->option_name, array() );
+		if ( null === $this->snippets_cache ) {
+			$this->snippets_cache = get_option( $this->option_name, array() );
+		}
+		return $this->snippets_cache;
+	}
+
+	/**
+	 * Invalidate the instance cache (call after writes).
+	 *
+	 * @since 1.0.0
+	 */
+	private function invalidate_cache() {
+		$this->snippets_cache = null;
 	}
 
 	/**
@@ -115,10 +134,20 @@ class SNDP_Custom_Snippets {
 			'frontend',
 			'admin',
 			'site_header',
+			'body_open',
 			'site_footer',
 			'before_content',
 			'after_content',
+			'after_paragraph',
 			'shortcode',
+			'wc_before_shop_loop',
+			'wc_after_shop_loop',
+			'wc_before_single_product',
+			'wc_after_single_product',
+			'wc_before_cart',
+			'wc_before_checkout_form',
+			'wc_after_checkout_form',
+			'wc_thankyou',
 		);
 
 		// Valid user conditions.
@@ -161,20 +190,39 @@ class SNDP_Custom_Snippets {
 				: array(),
 			'schedule_start' => sanitize_text_field( $snippet_data['schedule_start'] ?? '' ),
 			'schedule_end'   => sanitize_text_field( $snippet_data['schedule_end'] ?? '' ),
-			'source'         => sanitize_text_field( $snippet_data['source'] ?? 'custom' ),
+			'tags'              => isset( $snippet_data['tags'] ) && is_array( $snippet_data['tags'] )
+				? array_map( 'sanitize_text_field', $snippet_data['tags'] )
+				: array(),
+			'conditional_rules' => isset( $snippet_data['conditional_rules'] ) && is_array( $snippet_data['conditional_rules'] )
+				? $snippet_data['conditional_rules']
+				: array(),
+			'shortcode_name'    => sanitize_key( $snippet_data['shortcode_name'] ?? '' ),
+			'insert_paragraph'  => absint( $snippet_data['insert_paragraph'] ?? 2 ),
+			'source'            => sanitize_text_field( $snippet_data['source'] ?? 'custom' ),
 			'created_at'     => $existing ? $existing['created_at'] : current_time( 'mysql' ),
 			'created_by'     => $existing && isset( $existing['created_by'] ) ? $existing['created_by'] : get_current_user_id(),
 			'updated_at'     => current_time( 'mysql' ),
 			'updated_by'     => get_current_user_id(),
 		);
 
-		// Store revision of previous code if editing an existing snippet.
-		if ( $existing && isset( $existing['code'] ) && $existing['code'] !== $snippet['code'] ) {
-			$this->store_revision( $snippet_id, $existing['code'], $existing['code_type'] ?? 'php' );
+		// Store revision of previous state if editing an existing snippet with changes.
+		if ( $existing ) {
+			$changed = false;
+			$compare = array( 'code', 'code_type', 'title', 'description', 'location', 'hook', 'priority' );
+			foreach ( $compare as $field ) {
+				if ( ( $existing[ $field ] ?? '' ) !== ( $snippet[ $field ] ?? '' ) ) {
+					$changed = true;
+					break;
+				}
+			}
+			if ( $changed ) {
+				$this->store_revision( $snippet_id, $existing );
+			}
 		}
 
 		$snippets[ $snippet_id ] = $snippet;
 		update_option( $this->option_name, $snippets, false );
+		$this->invalidate_cache();
 
 		return $snippet_id;
 	}
@@ -195,6 +243,7 @@ class SNDP_Custom_Snippets {
 
 		unset( $snippets[ $snippet_id ] );
 		update_option( $this->option_name, $snippets, false );
+		$this->invalidate_cache();
 
 		// Clean up revisions for the deleted snippet.
 		$all_revisions = get_option( $this->revisions_option, array() );
@@ -225,6 +274,7 @@ class SNDP_Custom_Snippets {
 		$snippets[ $snippet_id ]['updated_at'] = current_time( 'mysql' );
 
 		update_option( $this->option_name, $snippets, false );
+		$this->invalidate_cache();
 
 		return $new_status;
 	}
@@ -247,6 +297,7 @@ class SNDP_Custom_Snippets {
 		$snippets[ $snippet_id ]['updated_at'] = current_time( 'mysql' );
 
 		update_option( $this->option_name, $snippets, false );
+		$this->invalidate_cache();
 
 		return true;
 	}
@@ -269,6 +320,7 @@ class SNDP_Custom_Snippets {
 		$snippets[ $snippet_id ]['updated_at'] = current_time( 'mysql' );
 
 		update_option( $this->option_name, $snippets, false );
+		$this->invalidate_cache();
 
 		return true;
 	}
@@ -368,6 +420,7 @@ class SNDP_Custom_Snippets {
 		$snippets[ $snippet_id ]['updated_at'] = current_time( 'mysql' );
 
 		update_option( $this->option_name, $snippets, false );
+		$this->invalidate_cache();
 	}
 
 	/**
@@ -385,6 +438,7 @@ class SNDP_Custom_Snippets {
 
 		unset( $snippets[ $snippet_id ]['last_error'] );
 		update_option( $this->option_name, $snippets, false );
+		$this->invalidate_cache();
 	}
 
 	/**
@@ -543,28 +597,40 @@ class SNDP_Custom_Snippets {
 	}
 
 	/**
-	 * Store a revision of snippet code.
+	 * Store a full-data revision of a snippet.
+	 *
+	 * Captures the complete snippet state so restoring brings back
+	 * code, title, description, location, settings — everything.
 	 *
 	 * @since 1.0.0
 	 * @param string $snippet_id Snippet ID.
-	 * @param string $code       Previous code.
-	 * @param string $code_type  Code type.
+	 * @param array  $snapshot   Full previous snippet data array.
 	 */
-	private function store_revision( $snippet_id, $code, $code_type ) {
+	private function store_revision( $snippet_id, $snapshot ) {
 		$all_revisions = get_option( $this->revisions_option, array() );
 		if ( ! isset( $all_revisions[ $snippet_id ] ) ) {
 			$all_revisions[ $snippet_id ] = array();
 		}
 
-		array_unshift(
-			$all_revisions[ $snippet_id ],
-			array(
-				'code'      => $code,
-				'code_type' => $code_type,
-				'date'      => current_time( 'mysql' ),
-				'user'      => get_current_user_id(),
-			)
+		$fields_to_store = array(
+			'title', 'description', 'code', 'code_type', 'location', 'hook',
+			'priority', 'user_cond', 'post_types', 'page_ids', 'url_patterns',
+			'taxonomies', 'schedule_start', 'schedule_end', 'tags',
+			'conditional_rules', 'shortcode_name', 'insert_paragraph',
 		);
+
+		$revision_data = array(
+			'date' => current_time( 'mysql' ),
+			'user' => get_current_user_id(),
+		);
+
+		foreach ( $fields_to_store as $field ) {
+			if ( isset( $snapshot[ $field ] ) ) {
+				$revision_data[ $field ] = $snapshot[ $field ];
+			}
+		}
+
+		array_unshift( $all_revisions[ $snippet_id ], $revision_data );
 
 		$all_revisions[ $snippet_id ] = array_slice( $all_revisions[ $snippet_id ], 0, $this->max_revisions );
 
@@ -572,10 +638,10 @@ class SNDP_Custom_Snippets {
 	}
 
 	/**
-	 * Get revisions for a snippet.
+	 * Get revisions for a snippet (or global scripts).
 	 *
 	 * @since 1.0.0
-	 * @param string $snippet_id Snippet ID.
+	 * @param string $snippet_id Snippet ID or 'global_scripts'.
 	 * @return array Array of revisions.
 	 */
 	public function get_revisions( $snippet_id ) {
@@ -584,7 +650,76 @@ class SNDP_Custom_Snippets {
 	}
 
 	/**
+	 * Store a revision for global Header & Footer scripts.
+	 *
+	 * Called before saving new global scripts so the previous state is preserved.
+	 *
+	 * @since 1.0.0
+	 * @param array $previous_scripts Previous scripts array (header, body_open, footer).
+	 */
+	public function store_global_scripts_revision( $previous_scripts ) {
+		$key           = 'global_scripts';
+		$all_revisions = get_option( $this->revisions_option, array() );
+
+		if ( ! isset( $all_revisions[ $key ] ) ) {
+			$all_revisions[ $key ] = array();
+		}
+
+		array_unshift(
+			$all_revisions[ $key ],
+			array(
+				'header'    => $previous_scripts['header'] ?? '',
+				'body_open' => $previous_scripts['body_open'] ?? '',
+				'footer'    => $previous_scripts['footer'] ?? '',
+				'date'      => current_time( 'mysql' ),
+				'user'      => get_current_user_id(),
+			)
+		);
+
+		$all_revisions[ $key ] = array_slice( $all_revisions[ $key ], 0, $this->max_revisions );
+
+		update_option( $this->revisions_option, $all_revisions, false );
+	}
+
+	/**
+	 * Restore global scripts to a specific revision.
+	 *
+	 * @since 1.0.0
+	 * @param int $revision_index Zero-based revision index.
+	 * @return bool True on success, false on failure.
+	 */
+	public function restore_global_scripts_revision( $revision_index ) {
+		$revisions = $this->get_revisions( 'global_scripts' );
+
+		if ( ! isset( $revisions[ $revision_index ] ) ) {
+			return false;
+		}
+
+		$rev     = $revisions[ $revision_index ];
+		$current = get_option( 'sndp_global_scripts', array() );
+
+		// Store current state as a new revision first.
+		if ( ! empty( $current ) ) {
+			$this->store_global_scripts_revision( $current );
+		}
+
+		$scripts = array(
+			'header'    => $rev['header'] ?? '',
+			'body_open' => $rev['body_open'] ?? '',
+			'footer'    => $rev['footer'] ?? '',
+		);
+
+		update_option( 'sndp_global_scripts', $scripts, false );
+
+		return true;
+	}
+
+	/**
 	 * Restore a snippet to a specific revision.
+	 *
+	 * Applies all stored fields from the revision snapshot back onto the
+	 * current snippet. The current state is saved as a new revision first
+	 * (handled by save()).
 	 *
 	 * @since 1.0.0
 	 * @param string $snippet_id    Snippet ID.
@@ -603,8 +738,20 @@ class SNDP_Custom_Snippets {
 			return false;
 		}
 
-		$snippet['code']      = $revisions[ $revision_index ]['code'];
-		$snippet['code_type'] = $revisions[ $revision_index ]['code_type'];
+		$rev = $revisions[ $revision_index ];
+
+		$restorable = array(
+			'title', 'description', 'code', 'code_type', 'location', 'hook',
+			'priority', 'user_cond', 'post_types', 'page_ids', 'url_patterns',
+			'taxonomies', 'schedule_start', 'schedule_end', 'tags',
+			'conditional_rules', 'shortcode_name', 'insert_paragraph',
+		);
+
+		foreach ( $restorable as $field ) {
+			if ( isset( $rev[ $field ] ) ) {
+				$snippet[ $field ] = $rev[ $field ];
+			}
+		}
 
 		return (bool) $this->save( $snippet );
 	}

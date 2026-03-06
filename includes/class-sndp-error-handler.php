@@ -183,6 +183,16 @@ class SNDP_Error_Handler {
 				}
 			}
 
+			SNDP_Activity_Log::instance()->log(
+				'error',
+				array(
+					'snippet_id'    => $current,
+					'snippet_title' => $title,
+					'context'       => $snippet_type,
+					'details'       => isset( $error['message'] ) ? $error['message'] : __( 'Unknown error', 'snipdrop' ),
+				)
+			);
+
 			// Log error to file.
 			$this->log_error_to_file( $current, $snippet_type, $error_data );
 

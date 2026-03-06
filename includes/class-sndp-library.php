@@ -365,6 +365,7 @@ class SNDP_Library {
 		$defaults = array(
 			'category' => '',
 			'search'   => '',
+			'tag'      => '',
 			'page'     => 1,
 			'per_page' => 30,
 		);
@@ -388,6 +389,20 @@ class SNDP_Library {
 				$snippets,
 				function ( $snippet ) use ( $args ) {
 					return isset( $snippet['category'] ) && $snippet['category'] === $args['category'];
+				}
+			);
+		}
+
+		// Filter by tag.
+		if ( ! empty( $args['tag'] ) ) {
+			$tag      = strtolower( $args['tag'] );
+			$snippets = array_filter(
+				$snippets,
+				function ( $snippet ) use ( $tag ) {
+					if ( ! isset( $snippet['tags'] ) || ! is_array( $snippet['tags'] ) ) {
+						return false;
+					}
+					return in_array( $tag, array_map( 'strtolower', $snippet['tags'] ), true );
 				}
 			);
 		}
@@ -455,7 +470,11 @@ class SNDP_Library {
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Bulk delete of transients, caching not applicable.
 		$wpdb->query(
-			"DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_sndp_snippet_%' OR option_name LIKE '_transient_timeout_sndp_snippet_%'"
+			$wpdb->prepare(
+				"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
+				$wpdb->esc_like( '_transient_sndp_snippet_' ) . '%',
+				$wpdb->esc_like( '_transient_timeout_sndp_snippet_' ) . '%'
+			)
 		);
 
 		// Optionally clear local snippet storage.

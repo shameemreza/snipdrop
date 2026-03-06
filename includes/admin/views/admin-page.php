@@ -90,13 +90,22 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<!-- Search Bar and View Toggle -->
 			<div class="sndp-search-bar">
 				<input type="search" id="sndp-search-input" class="sndp-search-input" placeholder="<?php esc_attr_e( 'Search snippets...', 'snipdrop' ); ?>">
-				<div class="sndp-view-toggle">
-					<button type="button" class="sndp-view-btn active" data-view="grid" title="<?php esc_attr_e( 'Grid view', 'snipdrop' ); ?>">
-						<span class="dashicons dashicons-grid-view"></span>
-					</button>
-					<button type="button" class="sndp-view-btn" data-view="list" title="<?php esc_attr_e( 'List view', 'snipdrop' ); ?>">
-						<span class="dashicons dashicons-list-view"></span>
-					</button>
+				<div class="sndp-toolbar-right">
+					<?php $tm_active = SNDP_Testing_Mode::instance()->is_enabled(); ?>
+					<label class="sndp-testing-mode-inline <?php echo $tm_active ? 'is-active' : ''; ?>" title="<?php esc_attr_e( 'Stage changes safely before publishing to visitors', 'snipdrop' ); ?>">
+						<input type="checkbox" class="sndp-testing-mode-toggle" value="1" <?php checked( $tm_active ); ?>>
+						<span class="dashicons dashicons-visibility"></span>
+						<span><?php esc_html_e( 'Testing', 'snipdrop' ); ?></span>
+					</label>
+					<span class="sndp-toolbar-sep"></span>
+					<div class="sndp-view-toggle">
+						<button type="button" class="sndp-view-btn active" data-view="grid" title="<?php esc_attr_e( 'Grid view', 'snipdrop' ); ?>">
+							<span class="dashicons dashicons-grid-view"></span>
+						</button>
+						<button type="button" class="sndp-view-btn" data-view="list" title="<?php esc_attr_e( 'List view', 'snipdrop' ); ?>">
+							<span class="dashicons dashicons-list-view"></span>
+						</button>
+					</div>
 				</div>
 			</div>
 
@@ -183,7 +192,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<# if ( data.tags && data.tags.length ) { #>
 				<span class="sndp-tags">
 					<# _.each( data.tags.slice(0, 3), function( tag ) { #>
-						<span class="sndp-tag">{{ tag }}</span>
+						<a href="#" class="sndp-tag sndp-tag-link" data-tag="{{ tag }}">{{ tag }}</a>
 					<# }); #>
 				</span>
 			<# } #>
