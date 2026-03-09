@@ -129,12 +129,12 @@ $sndp_has_entries = ! empty( $log_result['entries'] );
 				<div class="sndp-al-footer" id="sndp-al-pagination">
 					<span class="sndp-al-pagination-info">
 						<?php
-						printf(
-							/* translators: 1: shown count, 2: total count */
-							esc_html__( 'Showing %1$d of %2$d events', 'snipdrop' ),
-							min( 20, $log_result['total'] ),
-							$log_result['total']
-						);
+					printf(
+						/* translators: 1: shown count, 2: total count */
+						esc_html__( 'Showing %1$d of %2$d events', 'snipdrop' ),
+						absint( min( 20, $log_result['total'] ) ),
+						absint( $log_result['total'] )
+					);
 						?>
 					</span>
 					<button type="button" class="button button-secondary" id="sndp-al-load-more" data-page="1" data-total-pages="<?php echo absint( ceil( $log_result['total'] / 20 ) ); ?>">

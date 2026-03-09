@@ -305,21 +305,25 @@ class SNDP_Admin {
 					'connection_error'     => __( 'Unable to connect. Please check your internet connection and try again.', 'snipdrop' ),
 					'confirm_delete'       => __( 'Are you sure you want to delete this snippet?', 'snipdrop' ),
 					'delete_title'         => __( 'Delete Snippet', 'snipdrop' ),
-					'delete_desc'          => __( 'Are you sure you want to delete "%s"? This action cannot be undone.', 'snipdrop' ),
+					/* translators: %s: Snippet title */
+				'delete_desc'          => __( 'Are you sure you want to delete "%s"? This action cannot be undone.', 'snipdrop' ),
 					'delete_btn'           => __( 'Delete', 'snipdrop' ),
 					'deleting'             => __( 'Deleting...', 'snipdrop' ),
 					'bulk_delete_title'    => __( 'Delete Snippets', 'snipdrop' ),
-					'bulk_delete_desc'     => __( 'Are you sure you want to delete %d snippet(s)? This action cannot be undone.', 'snipdrop' ),
+					/* translators: %d: Number of snippets to delete */
+				'bulk_delete_desc'     => __( 'Are you sure you want to delete %d snippet(s)? This action cannot be undone.', 'snipdrop' ),
 					'copied'               => __( 'Snippet Copied!', 'snipdrop' ),
 					'copy_confirm_title'   => __( 'Copy to My Snippets', 'snipdrop' ),
-					'copy_confirm_desc'    => __( 'A copy of "%s" will be added to your custom snippets as inactive.', 'snipdrop' ),
+					/* translators: %s: Snippet title */
+				'copy_confirm_desc'    => __( 'A copy of "%s" will be added to your custom snippets as inactive.', 'snipdrop' ),
 					'copy_btn'             => __( 'Copy Snippet', 'snipdrop' ),
 					'copying'              => __( 'Copying...', 'snipdrop' ),
 					'copy_success_desc'    => __( 'The snippet has been copied to your custom snippets as inactive. You can edit it to customize the code or activate it.', 'snipdrop' ),
 					'copy_edit'            => __( 'Edit Snippet', 'snipdrop' ),
 					'copy_stay'            => __( 'Stay Here', 'snipdrop' ),
 					'copy_exists_title'    => __( 'Already Copied', 'snipdrop' ),
-					'copy_exists_desc'     => __( 'This snippet already exists in your custom snippets as "%s". Would you like to copy it again or edit the existing one?', 'snipdrop' ),
+					/* translators: %s: Existing snippet title */
+				'copy_exists_desc'     => __( 'This snippet already exists in your custom snippets as "%s". Would you like to copy it again or edit the existing one?', 'snipdrop' ),
 					'copy_again'           => __( 'Copy Again', 'snipdrop' ),
 					'copy_edit_existing'   => __( 'Edit Existing', 'snipdrop' ),
 					'plugin_required'      => __( 'This snippet requires the following plugin(s) to be active:', 'snipdrop' ),
@@ -836,6 +840,9 @@ class SNDP_Admin {
 		// Get conflict data for all active snippets.
 		$conflicts_by_snippet = $this->conflicts->get_conflicts_by_snippet();
 
+		$snippet_ids   = wp_list_pluck( $result['snippets'], 'id' );
+		$full_snippets = $this->library->get_snippets_batch( array_filter( $snippet_ids ) );
+
 		foreach ( $result['snippets'] as &$snippet ) {
 			$sid = isset( $snippet['id'] ) ? $snippet['id'] : '';
 
@@ -846,16 +853,14 @@ class SNDP_Admin {
 			$added_date        = isset( $snippet['added'] ) ? $snippet['added'] : '';
 			$snippet['is_new'] = ( '' !== $added_date && $added_date >= $seven_days_ago );
 
-			// Enrich with full snippet data for configurable/code_type fields.
-			$full_snippet = $this->library->get_snippet( $sid );
-			if ( ! is_wp_error( $full_snippet ) ) {
+			if ( isset( $full_snippets[ $sid ] ) ) {
+				$full_snippet = $full_snippets[ $sid ];
 				if ( ! empty( $full_snippet['configurable'] ) ) {
 					$snippet['configurable'] = true;
 					$snippet['settings']     = isset( $full_snippet['settings'] ) ? $full_snippet['settings'] : array();
 				}
 				$snippet['code_type'] = isset( $full_snippet['code_type'] ) ? $full_snippet['code_type'] : 'php';
 
-				// Clear stale errors for non-PHP snippets (from old eval-all bug).
 				if ( $snippet['has_error'] && 'php' !== $snippet['code_type'] ) {
 					$this->snippets->clear_snippet_error( $sid );
 					$snippet['has_error'] = false;
@@ -1920,6 +1925,11 @@ class SNDP_Admin {
 
 		$file = $_FILES['import_file']; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- File upload handled below.
 
+		// Verify the file was actually uploaded via HTTP POST.
+		if ( empty( $file['tmp_name'] ) || ! is_uploaded_file( $file['tmp_name'] ) ) {
+			wp_send_json_error( array( 'message' => __( 'Invalid upload. The file must be uploaded via the form.', 'snipdrop' ) ) );
+		}
+
 		// Validate file type.
 		$filetype = wp_check_filetype( $file['name'], array( 'json' => 'application/json' ) );
 		if ( 'json' !== $filetype['ext'] ) {
@@ -2055,112 +2065,19 @@ class SNDP_Admin {
 	 * @param string $code PHP code to validate (without opening <?php tag).
 	 * @return string|false Error message on failure, false if syntax is valid.
 	 */
+	/**
+	 * Validate PHP syntax.
+	 *
+	 * Delegates to the consolidated implementation in SNDP_Custom_Snippets.
+	 *
+	 * @since 1.0.0
+	 * @param string $code PHP code to validate.
+	 * @return string|false Error message on failure, false if valid.
+	 */
 	private function validate_php_syntax( $code ) {
-		$code = preg_replace( '/^<\?php\s*/', '', $code );
-		$code = preg_replace( '/\?>\s*$/', '', $code );
+		$result = $this->custom_snippets->validate_php_syntax( $code );
 
-		$full_code = '<?php ' . $code;
-
-		if ( function_exists( 'proc_open' ) ) {
-			$php_bin = $this->find_php_cli_binary();
-
-			if ( $php_bin ) {
-				$result = $this->run_php_lint( $php_bin, $full_code );
-				if ( null !== $result ) {
-					return $result;
-				}
-			}
-		}
-
-		// Fallback: token_get_all() catches tokenizer-level parse errors.
-		try {
-			$tokens = @token_get_all( $full_code ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Intentionally silenced to capture tokenizer errors.
-		} catch ( \ParseError $e ) {
-			/* translators: %s: PHP syntax error message */
-			return sprintf( __( 'Syntax error: %s', 'snipdrop' ), $e->getMessage() );
-		}
-
-		return false;
-	}
-
-	/**
-	 * Find the PHP CLI binary path.
-	 *
-	 * Handles FPM/CGI contexts where PHP_BINARY points to php-fpm or php-cgi
-	 * instead of the CLI binary needed for `php -l`.
-	 *
-	 * @since 1.0.0
-	 * @return string|false PHP CLI binary path, or false if unavailable.
-	 */
-	private function find_php_cli_binary() {
-		if ( defined( 'PHP_BINARY' ) && PHP_BINARY ) {
-			$binary = PHP_BINARY;
-
-			// If not an FPM/CGI binary, use it directly.
-			if ( ! preg_match( '/php-?(fpm|cgi)/i', $binary ) ) {
-				return $binary;
-			}
-
-			// Derive CLI path from FPM/CGI: /usr/sbin/php-fpm8.3 → /usr/bin/php8.3
-			$cli_path = preg_replace( '#/php-?(fpm|cgi)#i', '/php', $binary );
-			$cli_path = str_replace( '/sbin/', '/bin/', $cli_path );
-			if ( @is_executable( $cli_path ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
-				return $cli_path;
-			}
-		}
-
-		return 'php';
-	}
-
-	/**
-	 * Run php -l on code and return the result.
-	 *
-	 * @since 1.0.0
-	 * @param string $php_bin  Path to PHP CLI binary.
-	 * @param string $code     Full PHP code including opening tag.
-	 * @return string|false|null Error message string on syntax error, false if valid,
-	 *                           null if the lint process failed (caller should use fallback).
-	 */
-	private function run_php_lint( $php_bin, $code ) {
-		$descriptors = array(
-			0 => array( 'pipe', 'r' ),
-			1 => array( 'pipe', 'w' ),
-			2 => array( 'pipe', 'w' ),
-		);
-
-		$process = @proc_open( $php_bin . ' -l', $descriptors, $pipes ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.system_calls_proc_open -- Required for syntax validation without executing user code.
-
-		if ( ! is_resource( $process ) ) {
-			return null;
-		}
-
-		fwrite( $pipes[0], $code );
-		fclose( $pipes[0] );
-
-		$stdout = stream_get_contents( $pipes[1] );
-		$stderr = stream_get_contents( $pipes[2] );
-		fclose( $pipes[1] );
-		fclose( $pipes[2] );
-
-		$exit_code = proc_close( $process );
-
-		if ( 0 === $exit_code ) {
-			return false;
-		}
-
-		$error_output = ! empty( $stderr ) ? $stderr : $stdout;
-
-		// Non-parse errors (binary not found, permission denied, etc.) — signal caller to use fallback.
-		if ( ! preg_match( '/Parse error|syntax error/i', $error_output ) ) {
-			return null;
-		}
-
-		if ( preg_match( '/Parse error:\s*(.+?)(?:\s+in\s+.+)?$/mi', $error_output, $matches ) ) {
-			/* translators: %s: PHP syntax error message */
-			return sprintf( __( 'Syntax error: %s', 'snipdrop' ), trim( $matches[1] ) );
-		}
-
-		return __( 'The snippet contains a PHP syntax error.', 'snipdrop' );
+		return ( true === $result ) ? false : $result;
 	}
 
 	/**

@@ -76,6 +76,7 @@ class SNDP_Snippets {
 	 */
 	public function invalidate_settings_cache() {
 		$this->settings_cache = null;
+		SNDP_Conflicts::instance()->invalidate_cache();
 	}
 
 	/**

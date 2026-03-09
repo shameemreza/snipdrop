@@ -213,17 +213,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 				<# } #>
 			</span>
 			<div class="sndp-snippet-actions">
-				<button type="button" class="button button-small sndp-view-code" data-snippet-id="{{ data.id }}" title="<?php esc_attr_e( 'View Code', 'snipdrop' ); ?>">
-					<span class="dashicons dashicons-editor-code"></span>
-				</button>
+			<button type="button" class="button button-small sndp-view-code" data-snippet-id="{{ data.id }}" title="<?php esc_attr_e( 'View Code', 'snipdrop' ); ?>">
+				<span class="dashicons dashicons-visibility"></span>
+			</button>
 				<# if ( data.configurable && data.settings && data.settings.length ) { #>
 					<button type="button" class="button button-small sndp-configure-snippet" data-snippet-id="{{ data.id }}" title="<?php esc_attr_e( 'Configure', 'snipdrop' ); ?>">
 						<span class="dashicons dashicons-admin-generic"></span>
 					</button>
 				<# } #>
-				<button type="button" class="button button-small sndp-copy-to-custom" data-snippet-id="{{ data.id }}" title="<?php esc_attr_e( 'Copy to My Snippets', 'snipdrop' ); ?>">
-					<span class="dashicons dashicons-admin-page"></span>
-				</button>
+			<button type="button" class="button button-small sndp-copy-to-custom" data-snippet-id="{{ data.id }}" title="<?php esc_attr_e( 'Copy to My Snippets', 'snipdrop' ); ?>">
+				<span class="dashicons dashicons-download"></span>
+			</button>
 			</div>
 		</div>
 	</div>

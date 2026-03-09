@@ -96,16 +96,32 @@ class SNDP_Conflicts {
 			return $this->hook_map_cache;
 		}
 
+		$cached = get_transient( 'sndp_conflict_hook_map' );
+		if ( is_array( $cached ) ) {
+			$this->hook_map_cache = $cached;
+			return $cached;
+		}
+
 		$map = array();
 
-		// Library snippets — get hooks from cached snippet data.
 		$this->build_library_hook_map( $map );
-
-		// Custom snippets — parse code with regex.
 		$this->build_custom_hook_map( $map );
 
 		$this->hook_map_cache = $map;
+		set_transient( 'sndp_conflict_hook_map', $map, HOUR_IN_SECONDS );
 		return $map;
+	}
+
+	/**
+	 * Invalidate the cached conflict hook map.
+	 *
+	 * Call when snippets are enabled, disabled, saved, or deleted.
+	 *
+	 * @since 1.0.0
+	 */
+	public function invalidate_cache() {
+		$this->hook_map_cache = null;
+		delete_transient( 'sndp_conflict_hook_map' );
 	}
 
 	/**

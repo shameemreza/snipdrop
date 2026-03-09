@@ -196,51 +196,66 @@ class SNDP_Importer {
 		switch ( $slug ) {
 			case 'wpcode':
 			case 'wpcode-premium':
-				$count = $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = 'wpcode'" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$count = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s", 'wpcode' ) );
 				return $count > 0;
 
 			case 'code-snippets':
 			case 'code-snippets-pro':
-				$table = $wpdb->prefix . 'snippets';
-				// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-				$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) );
-				if ( $exists !== $table ) {
-					return false;
-				}
-				$count = $wpdb->get_var( "SELECT COUNT(*) FROM `{$table}`" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-				return $count > 0;
+				return $this->has_custom_table_data( 'snippets' );
 
 			case 'woody':
-				$count = $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = 'wbcr-snippets'" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$count = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s", 'wbcr-snippets' ) );
 				return $count > 0;
 
 			case 'simple-custom-css-js':
-				$count = $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = 'custom-css-js'" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$count = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s", 'custom-css-js' ) );
 				return $count > 0;
 
 			case 'header-footer-code-manager':
-				$table = $wpdb->prefix . 'hfcm_scripts';
-				// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-				$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) );
-				if ( $exists !== $table ) {
-					return false;
-				}
-				$count = $wpdb->get_var( "SELECT COUNT(*) FROM `{$table}`" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-				return $count > 0;
+				return $this->has_custom_table_data( 'hfcm_scripts' );
 
 			case 'post-snippets':
-				$table = $wpdb->prefix . 'pspro_snippets';
-				// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-				$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) );
-				if ( $exists !== $table ) {
-					return false;
-				}
-				$count = $wpdb->get_var( "SELECT COUNT(*) FROM `{$table}`" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-				return $count > 0;
+				return $this->has_custom_table_data( 'pspro_snippets' );
 
 			default:
 				return false;
 		}
+	}
+
+	/**
+	 * Check whether a custom (non-core) table has rows.
+	 *
+	 * Validates the table exists first, then counts rows.
+	 * The suffix is an internal hardcoded value — never user input.
+	 *
+	 * @since 1.0.0
+	 * @param string $suffix Table name suffix (without prefix).
+	 * @return bool
+	 */
+	private function has_custom_table_data( $suffix ) {
+		global $wpdb;
+
+		$allowed = array( 'snippets', 'hfcm_scripts', 'pspro_snippets' );
+		if ( ! in_array( $suffix, $allowed, true ) ) {
+			return false;
+		}
+
+		$table = $wpdb->prefix . $suffix;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) );
+		if ( $exists !== $table ) {
+			return false;
+		}
+
+		// Table name is validated against the allowlist and confirmed to exist.
+		$safe_table = esc_sql( $table );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$count = $wpdb->get_var( "SELECT COUNT(*) FROM `{$safe_table}`" );
+		return $count > 0;
 	}
 
 	// ------------------------------------------------------------------
@@ -319,8 +334,8 @@ class SNDP_Importer {
 
 		// Fallback: read the table directly.
 		global $wpdb;
-		$table = $wpdb->prefix . 'snippets';
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$table = esc_sql( $wpdb->prefix . 'snippets' );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is hardcoded prefix + constant suffix.
 		$rows = $wpdb->get_results( "SELECT id, name FROM `{$table}`", ARRAY_A );
 
 		$snippets = array();
@@ -385,9 +400,9 @@ class SNDP_Importer {
 	 */
 	private function get_hfcm_snippets() {
 		global $wpdb;
-		$table = $wpdb->prefix . 'hfcm_scripts';
+		$table = esc_sql( $wpdb->prefix . 'hfcm_scripts' );
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is hardcoded prefix + constant suffix.
 		$rows = $wpdb->get_results( "SELECT script_id, name FROM `{$table}`", ARRAY_A );
 
 		$snippets = array();
@@ -406,9 +421,9 @@ class SNDP_Importer {
 	 */
 	private function get_post_snippets_snippets() {
 		global $wpdb;
-		$table = $wpdb->prefix . 'pspro_snippets';
+		$table = esc_sql( $wpdb->prefix . 'pspro_snippets' );
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is hardcoded prefix + constant suffix.
 		$rows = $wpdb->get_results( "SELECT ID, snippet_title FROM `{$table}`", ARRAY_A );
 
 		$snippets = array();
@@ -596,28 +611,41 @@ class SNDP_Importer {
 			return array();
 		}
 
-		$show = isset( $rules['show'] ) ? $rules['show'] : 'show';
+		$relation_to_operator = array(
+			'='  => 'is',
+			'!=' => 'is_not',
+			'>'  => 'greater_than',
+			'<'  => 'less_than',
+		);
 
 		$groups = array();
 		if ( ! empty( $rules['groups'] ) && is_array( $rules['groups'] ) ) {
 			foreach ( $rules['groups'] as $group ) {
-				$mapped_group = array();
 				if ( ! is_array( $group ) ) {
 					continue;
 				}
+
+				$mapped_rules = array();
 				foreach ( $group as $rule ) {
 					if ( ! is_array( $rule ) || empty( $rule['type'] ) ) {
 						continue;
 					}
-					$mapped_group[] = array(
+
+					$relation = isset( $rule['relation'] ) ? $rule['relation'] : '=';
+					$operator = isset( $relation_to_operator[ $relation ] ) ? $relation_to_operator[ $relation ] : 'is';
+
+					$mapped_rules[] = array(
 						'type'     => sanitize_key( $rule['type'] ),
-						'option'   => isset( $rule['option'] ) ? sanitize_key( $rule['option'] ) : '',
-						'relation' => isset( $rule['relation'] ) ? sanitize_key( $rule['relation'] ) : '=',
+						'operator' => $operator,
 						'value'    => isset( $rule['value'] ) ? $rule['value'] : '',
 					);
 				}
-				if ( ! empty( $mapped_group ) ) {
-					$groups[] = $mapped_group;
+
+				if ( ! empty( $mapped_rules ) ) {
+					$groups[] = array(
+						'match' => 'all',
+						'rules' => $mapped_rules,
+					);
 				}
 			}
 		}
@@ -628,7 +656,7 @@ class SNDP_Importer {
 
 		return array(
 			'enabled' => true,
-			'show'    => $show,
+			'match'   => 'all',
 			'groups'  => $groups,
 		);
 	}
@@ -654,8 +682,8 @@ class SNDP_Importer {
 		if ( ! $snippet ) {
 			// Fallback: read from table directly.
 			global $wpdb;
-			$table   = $wpdb->prefix . 'snippets';
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$table = esc_sql( $wpdb->prefix . 'snippets' );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is hardcoded prefix + constant suffix.
 			$snippet = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM `{$table}` WHERE id = %d", absint( $source_id ) ) );
 		}
 
@@ -899,8 +927,8 @@ class SNDP_Importer {
 	 */
 	private function import_hfcm_snippet( $source_id ) {
 		global $wpdb;
-		$table   = $wpdb->prefix . 'hfcm_scripts';
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$table = esc_sql( $wpdb->prefix . 'hfcm_scripts' );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is hardcoded prefix + constant suffix.
 		$snippet = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM `{$table}` WHERE script_id = %d", absint( $source_id ) ) );
 
 		if ( ! $snippet ) {
@@ -1034,16 +1062,28 @@ class SNDP_Importer {
 	 * @return array
 	 */
 	private function build_conditional_rules( $show, $type, $option, $relation, $value ) {
+		$relation_to_operator = array(
+			'='  => 'is',
+			'!=' => 'is_not',
+		);
+		$operator = isset( $relation_to_operator[ $relation ] ) ? $relation_to_operator[ $relation ] : 'is';
+
+		if ( 'hide' === $show ) {
+			$operator = ( 'is' === $operator ) ? 'is_not' : 'is';
+		}
+
 		return array(
 			'enabled' => true,
-			'show'    => $show,
+			'match'   => 'all',
 			'groups'  => array(
 				array(
-					array(
-						'type'     => $type,
-						'option'   => $option,
-						'relation' => $relation,
-						'value'    => $value,
+					'match' => 'all',
+					'rules' => array(
+						array(
+							'type'     => $type,
+							'operator' => $operator,
+							'value'    => $value,
+						),
 					),
 				),
 			),
@@ -1062,8 +1102,8 @@ class SNDP_Importer {
 	 */
 	private function import_post_snippets_snippet( $source_id ) {
 		global $wpdb;
-		$table   = $wpdb->prefix . 'pspro_snippets';
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$table = esc_sql( $wpdb->prefix . 'pspro_snippets' );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is hardcoded prefix + constant suffix.
 		$snippet = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM `{$table}` WHERE ID = %d", absint( $source_id ) ), ARRAY_A );
 
 		if ( empty( $snippet ) ) {
@@ -1086,9 +1126,9 @@ class SNDP_Importer {
 		if ( ! empty( $snippet['snippet_group'] ) ) {
 			$group_ids = maybe_unserialize( $snippet['snippet_group'] );
 			if ( is_array( $group_ids ) ) {
-				$group_table = $wpdb->prefix . 'pspro_groups';
+				$group_table = esc_sql( $wpdb->prefix . 'pspro_groups' );
 				foreach ( $group_ids as $gid ) {
-					// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+					// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is hardcoded prefix + constant suffix.
 					$gname = $wpdb->get_var( $wpdb->prepare( "SELECT group_name FROM `{$group_table}` WHERE ID = %d", absint( $gid ) ) );
 					if ( $gname ) {
 						$tags[] = sanitize_title( $gname );

@@ -97,6 +97,8 @@ class SNDP_Custom_Snippets {
 	 */
 	private function invalidate_cache() {
 		$this->snippets_cache = null;
+		delete_transient( 'sndp_shortcode_index' );
+		SNDP_Conflicts::instance()->invalidate_cache();
 	}
 
 	/**
@@ -449,21 +451,112 @@ class SNDP_Custom_Snippets {
 	 * @return true|string True if valid, error message if not.
 	 */
 	public function validate_php_syntax( $code ) {
-		// Remove opening PHP tag if present.
 		$code = preg_replace( '/^\s*<\?php\s*/i', '', $code );
+		$code = preg_replace( '/\?>\s*$/', '', $code );
 
-		// Try to check syntax using token_get_all.
+		$full_code = '<?php ' . $code;
+
+		if ( function_exists( 'proc_open' ) ) {
+			$php_bin = $this->find_php_cli_binary();
+
+			if ( $php_bin ) {
+				$result = $this->run_php_lint( $php_bin, $full_code );
+				if ( null !== $result ) {
+					return ( false === $result ) ? true : $result;
+				}
+			}
+		}
+
 		try {
 			// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Intentional error suppression for syntax checking.
-			$tokens = @token_get_all( '<?php ' . $code );
+			$tokens = @token_get_all( $full_code );
 			if ( empty( $tokens ) ) {
 				return __( 'Unable to parse PHP code.', 'snipdrop' );
 			}
 		} catch ( \ParseError $e ) {
-			return $e->getMessage();
+			/* translators: %s: PHP syntax error message */
+			return sprintf( __( 'Syntax error: %s', 'snipdrop' ), $e->getMessage() );
 		}
 
 		return true;
+	}
+
+	/**
+	 * Find the PHP CLI binary path.
+	 *
+	 * Handles FPM/CGI contexts where PHP_BINARY points to php-fpm or php-cgi.
+	 *
+	 * @since 1.0.0
+	 * @return string|false PHP CLI binary path, or false if unavailable.
+	 */
+	private function find_php_cli_binary() {
+		if ( defined( 'PHP_BINARY' ) && PHP_BINARY ) {
+			$binary = PHP_BINARY;
+
+			if ( ! preg_match( '/php-?(fpm|cgi)/i', $binary ) ) {
+				return $binary;
+			}
+
+			$cli_path = preg_replace( '#/php-?(fpm|cgi)#i', '/php', $binary );
+			$cli_path = str_replace( '/sbin/', '/bin/', $cli_path );
+			if ( @is_executable( $cli_path ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+				return $cli_path;
+			}
+		}
+
+		return 'php';
+	}
+
+	/**
+	 * Run php -l on code and return the result.
+	 *
+	 * @since 1.0.0
+	 * @param string $php_bin Path to PHP CLI binary.
+	 * @param string $code    Full PHP code including opening tag.
+	 * @return string|false|null Error message on syntax error, false if valid,
+	 *                           null if the lint process failed.
+	 */
+	private function run_php_lint( $php_bin, $code ) {
+		$descriptors = array(
+			0 => array( 'pipe', 'r' ),
+			1 => array( 'pipe', 'w' ),
+			2 => array( 'pipe', 'w' ),
+		);
+
+		$process = @proc_open( $php_bin . ' -l', $descriptors, $pipes ); // phpcs:ignore Generic.PHP.ForbiddenFunctions.Found, WordPress.PHP.DiscouragedPHPFunctions.system_calls_proc_open, WordPress.PHP.NoSilencedErrors.Discouraged -- Required for syntax validation without executing user code.
+
+		if ( ! is_resource( $process ) ) {
+			return null;
+		}
+
+		// phpcs:disable WordPress.WP.AlternativeFunctions.file_system_operations_fwrite, WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Pipe I/O for proc_open; WP_Filesystem does not support process pipes.
+		fwrite( $pipes[0], $code );
+		fclose( $pipes[0] );
+
+		$stdout = stream_get_contents( $pipes[1] );
+		$stderr = stream_get_contents( $pipes[2] );
+		fclose( $pipes[1] );
+		fclose( $pipes[2] );
+		// phpcs:enable WordPress.WP.AlternativeFunctions.file_system_operations_fwrite, WordPress.WP.AlternativeFunctions.file_system_operations_fclose
+
+		$exit_code = proc_close( $process );
+
+		if ( 0 === $exit_code ) {
+			return false;
+		}
+
+		$error_output = ! empty( $stderr ) ? $stderr : $stdout;
+
+		if ( ! preg_match( '/Parse error|syntax error/i', $error_output ) ) {
+			return null;
+		}
+
+		if ( preg_match( '/Parse error:\s*(.+?)(?:\s+in\s+.+)?$/mi', $error_output, $matches ) ) {
+			/* translators: %s: PHP syntax error message */
+			return sprintf( __( 'Syntax error: %s', 'snipdrop' ), trim( $matches[1] ) );
+		}
+
+		return __( 'The snippet contains a PHP syntax error.', 'snipdrop' );
 	}
 
 	/**

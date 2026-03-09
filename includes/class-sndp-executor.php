@@ -151,15 +151,60 @@ class SNDP_Executor {
 			add_action( 'woocommerce_thankyou', array( $this, 'execute_wc_thankyou' ), 15 );
 		}
 
-		// Register shortcodes.
 		add_shortcode( 'snipdrop', array( $this, 'render_shortcode' ) );
-		$this->register_custom_shortcodes();
+
+		if ( ! is_admin() ) {
+			$this->register_custom_shortcodes();
+		}
 	}
 
 	/**
 	 * Register custom named shortcodes from active snippets.
+	 *
+	 * Uses a lightweight cached index to avoid loading all snippet data.
 	 */
 	private function register_custom_shortcodes() {
+		$index = $this->get_shortcode_index();
+
+		foreach ( $index as $snippet_id => $name ) {
+			if ( shortcode_exists( $name ) ) {
+				continue;
+			}
+
+			add_shortcode(
+				$name,
+				function () use ( $snippet_id ) {
+					return $this->render_shortcode( array( 'id' => $snippet_id ) );
+				}
+			);
+		}
+	}
+
+	/**
+	 * Get the shortcode index (snippet_id → shortcode_name map).
+	 *
+	 * Cached as a transient; rebuilt when snippets change.
+	 *
+	 * @since 1.0.0
+	 * @return array<string, string>
+	 */
+	private function get_shortcode_index() {
+		$index = get_transient( 'sndp_shortcode_index' );
+		if ( is_array( $index ) ) {
+			return $index;
+		}
+
+		return $this->rebuild_shortcode_index();
+	}
+
+	/**
+	 * Rebuild the shortcode index from current snippets.
+	 *
+	 * @since 1.0.0
+	 * @return array<string, string>
+	 */
+	public function rebuild_shortcode_index() {
+		$index        = array();
 		$all_snippets = $this->custom_snippets->get_all();
 
 		foreach ( $all_snippets as $snippet ) {
@@ -174,18 +219,13 @@ class SNDP_Executor {
 			}
 
 			$name = sanitize_key( $snippet['shortcode_name'] );
-			if ( empty( $name ) || shortcode_exists( $name ) ) {
-				continue;
+			if ( ! empty( $name ) ) {
+				$index[ $snippet['id'] ] = $name;
 			}
-
-			$snippet_id = $snippet['id'];
-			add_shortcode(
-				$name,
-				function () use ( $snippet_id ) {
-					return $this->render_shortcode( array( 'id' => $snippet_id ) );
-				}
-			);
 		}
+
+		set_transient( 'sndp_shortcode_index', $index, DAY_IN_SECONDS );
+		return $index;
 	}
 
 	/**
@@ -357,17 +397,12 @@ class SNDP_Executor {
 	 * @return bool
 	 */
 	private function should_run_custom_snippet( $snippet ) {
-		if ( $this->is_admin_bypass_active() ) {
-			return false;
-		}
-
-		if ( ! $this->check_schedule_condition( $snippet ) ) {
+		if ( ! $this->check_common_conditions( $snippet ) ) {
 			return false;
 		}
 
 		$location = isset( $snippet['location'] ) ? $snippet['location'] : 'everywhere';
 
-		// Auto-insert locations are handled by their own hooks — skip during init execution.
 		$auto_insert_locations = array(
 			'site_header',
 			'site_footer',
@@ -389,7 +424,6 @@ class SNDP_Executor {
 			return false;
 		}
 
-		// Check location (admin/frontend/everywhere).
 		switch ( $location ) {
 			case 'frontend':
 				if ( is_admin() ) {
@@ -401,17 +435,65 @@ class SNDP_Executor {
 				if ( ! is_admin() ) {
 					return false;
 				}
-				// Admin snippets don't need further frontend checks.
 				return $this->check_user_condition( $snippet );
 		}
 
-		// Check user condition.
+		return $this->check_targeting_conditions( $snippet, ! is_admin() );
+	}
+
+	/**
+	 * Check if an auto-insert snippet should run.
+	 *
+	 * @since 1.0.0
+	 * @param array $snippet Snippet data.
+	 * @return bool
+	 */
+	private function should_run_auto_insert( $snippet ) {
+		if ( ! $this->check_common_conditions( $snippet ) ) {
+			return false;
+		}
+
+		return $this->check_targeting_conditions( $snippet, true );
+	}
+
+	/**
+	 * Run the shared pre-flight checks common to both custom and auto-insert snippets.
+	 *
+	 * @since 1.0.0
+	 * @param array $snippet Snippet data.
+	 * @return bool False if the snippet should not execute.
+	 */
+	private function check_common_conditions( $snippet ) {
+		if ( $this->is_admin_bypass_active() ) {
+			return false;
+		}
+
+		if ( ! $this->check_schedule_condition( $snippet ) ) {
+			return false;
+		}
+
+		if ( $this->snippets->is_safe_mode() ) {
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
+	 * Run user and page-level targeting conditions.
+	 *
+	 * @since 1.0.0
+	 * @param array $snippet            Snippet data.
+	 * @param bool  $check_page_targets Whether to evaluate page-level conditions
+	 *                                  (post type, page ID, URL, taxonomy).
+	 * @return bool
+	 */
+	private function check_targeting_conditions( $snippet, $check_page_targets = true ) {
 		if ( ! $this->check_user_condition( $snippet ) ) {
 			return false;
 		}
 
-		// Frontend-only checks.
-		if ( ! is_admin() ) {
+		if ( $check_page_targets ) {
 			if ( ! $this->check_post_type_condition( $snippet ) ) {
 				return false;
 			}
@@ -424,64 +506,11 @@ class SNDP_Executor {
 				return false;
 			}
 
-		if ( ! $this->check_taxonomy_condition( $snippet ) ) {
-			return false;
-		}
-	}
-
-		// Evaluate conditional logic rules (Rule Builder).
-		if ( ! SNDP_Conditional_Logic::instance()->should_run( $snippet ) ) {
-			return false;
+			if ( ! $this->check_taxonomy_condition( $snippet ) ) {
+				return false;
+			}
 		}
 
-		return true;
-	}
-
-	/**
-	 * Check if an auto-insert snippet should run.
-	 *
-	 * @since 1.0.0
-	 * @param array $snippet Snippet data.
-	 * @return bool
-	 */
-	private function should_run_auto_insert( $snippet ) {
-		if ( $this->is_admin_bypass_active() ) {
-			return false;
-		}
-
-		if ( ! $this->check_schedule_condition( $snippet ) ) {
-			return false;
-		}
-
-		// Check safe mode.
-		if ( $this->snippets->is_safe_mode() ) {
-			return false;
-		}
-
-		// Check user condition.
-		if ( ! $this->check_user_condition( $snippet ) ) {
-			return false;
-		}
-
-		// Check post type condition.
-		if ( ! $this->check_post_type_condition( $snippet ) ) {
-			return false;
-		}
-
-		// Check page ID condition.
-		if ( ! $this->check_page_id_condition( $snippet ) ) {
-			return false;
-		}
-
-		if ( ! $this->check_url_pattern_condition( $snippet ) ) {
-			return false;
-		}
-
-		if ( ! $this->check_taxonomy_condition( $snippet ) ) {
-			return false;
-		}
-
-		// Evaluate conditional logic rules (Rule Builder).
 		if ( ! SNDP_Conditional_Logic::instance()->should_run( $snippet ) ) {
 			return false;
 		}
@@ -1068,6 +1097,10 @@ class SNDP_Executor {
 	/**
 	 * Replace placeholders in code with user configuration values.
 	 *
+	 * Values are sanitized per their declared type from the snippet's settings
+	 * definition. Unknown keys or values that fail validation are replaced with
+	 * the setting's default to prevent code injection through eval().
+	 *
 	 * @since 1.0.0
 	 * @param string $code              The snippet code.
 	 * @param string $snippet_id        Snippet ID.
@@ -1075,23 +1108,111 @@ class SNDP_Executor {
 	 * @return string Code with placeholders replaced.
 	 */
 	private function replace_placeholders( $code, $snippet_id, $settings_definition ) {
-		// Get user configuration.
 		$user_config = $this->snippets->get_snippet_config( $snippet_id );
+		$defaults    = $this->snippets->get_default_config( $settings_definition );
+		$config      = wp_parse_args( $user_config, $defaults );
 
-		// Get defaults.
-		$defaults = $this->snippets->get_default_config( $settings_definition );
+		$type_map    = $this->build_settings_type_map( $settings_definition );
+		$options_map = $this->build_settings_options_map( $settings_definition );
 
-		// Merge user config with defaults.
-		$config = wp_parse_args( $user_config, $defaults );
-
-		// Replace each placeholder with escaped values to prevent code injection.
 		foreach ( $config as $key => $value ) {
-			$safe_value = addslashes( (string) $value );
-			$code       = str_replace( '{{' . $key . '}}', $safe_value, $code );
-			$code       = str_replace( '{' . $key . '}', $safe_value, $code );
+			$type       = isset( $type_map[ $key ] ) ? $type_map[ $key ] : 'text';
+			$default    = isset( $defaults[ $key ] ) ? $defaults[ $key ] : '';
+			$safe_value = $this->sanitize_placeholder_value( $value, $type, $default, isset( $options_map[ $key ] ) ? $options_map[ $key ] : array() );
+
+			$code = str_replace( '{{' . $key . '}}', $safe_value, $code );
+			$code = str_replace( '{' . $key . '}', $safe_value, $code );
 		}
 
 		return $code;
+	}
+
+	/**
+	 * Build a map of setting ID → declared type from the settings definition.
+	 *
+	 * @since 1.0.0
+	 * @param array $settings_definition Settings definition array.
+	 * @return array Keyed by setting ID.
+	 */
+	private function build_settings_type_map( $settings_definition ) {
+		$map = array();
+		if ( ! is_array( $settings_definition ) ) {
+			return $map;
+		}
+		foreach ( $settings_definition as $setting ) {
+			if ( isset( $setting['id'], $setting['type'] ) ) {
+				$map[ $setting['id'] ] = $setting['type'];
+			}
+		}
+		return $map;
+	}
+
+	/**
+	 * Build a map of setting ID → allowed option values for select/radio types.
+	 *
+	 * @since 1.0.0
+	 * @param array $settings_definition Settings definition array.
+	 * @return array Keyed by setting ID, each value is an array of allowed option values.
+	 */
+	private function build_settings_options_map( $settings_definition ) {
+		$map = array();
+		if ( ! is_array( $settings_definition ) ) {
+			return $map;
+		}
+		foreach ( $settings_definition as $setting ) {
+			if ( isset( $setting['id'], $setting['options'] ) && is_array( $setting['options'] ) ) {
+				$map[ $setting['id'] ] = array_map( 'strval', array_keys( $setting['options'] ) );
+			}
+		}
+		return $map;
+	}
+
+	/**
+	 * Sanitize a single placeholder value based on its declared type.
+	 *
+	 * Falls back to the default if the value is invalid for the type.
+	 *
+	 * @since 1.0.0
+	 * @param mixed  $value   Raw value.
+	 * @param string $type    Setting type (text, number, select, checkbox, color, url).
+	 * @param mixed  $default Default value to fall back to.
+	 * @param array  $options Allowed values for select/radio types.
+	 * @return string Safe string for placeholder replacement.
+	 */
+	private function sanitize_placeholder_value( $value, $type, $default, $options = array() ) {
+		$value = (string) $value;
+
+		switch ( $type ) {
+			case 'number':
+				if ( ! is_numeric( $value ) ) {
+					return addslashes( (string) $default );
+				}
+				return $value;
+
+			case 'select':
+			case 'radio':
+				if ( ! empty( $options ) && ! in_array( $value, $options, true ) ) {
+					return addslashes( (string) $default );
+				}
+				return addslashes( $value );
+
+			case 'checkbox':
+				return in_array( $value, array( '1', 'yes', 'true', 'on' ), true ) ? '1' : '0';
+
+			case 'color':
+				if ( preg_match( '/^#[0-9a-fA-F]{3,8}$/', $value ) ) {
+					return $value;
+				}
+				return addslashes( (string) $default );
+
+			case 'url':
+				$value = esc_url_raw( $value );
+				return addslashes( $value );
+
+			case 'text':
+			default:
+				return addslashes( $value );
+		}
 	}
 
 	/**
@@ -1122,6 +1243,10 @@ class SNDP_Executor {
 
 			/**
 			 * Filter snippet code before execution.
+			 *
+			 * SECURITY: Callbacks attached to this filter can modify the code
+			 * that is passed to eval(). Only grant sndp_manage_snippets to
+			 * trusted users, and audit any plugin that hooks into this filter.
 			 *
 			 * @since 1.0.0
 			 * @param string $code         The PHP code to execute.

@@ -91,19 +91,20 @@ function sndp_uninstall_cleanup() {
 	// Remove error log directory and files.
 	$log_dir = WP_CONTENT_DIR . '/snipdrop-logs';
 	if ( is_dir( $log_dir ) ) {
-		$files = glob( $log_dir . '/*' );
-		if ( is_array( $files ) ) {
-			foreach ( $files as $file ) {
-				if ( is_file( $file ) ) {
-					@unlink( $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink
-				}
-			}
+		if ( ! function_exists( 'WP_Filesystem' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
 		}
-		@rmdir( $log_dir ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		WP_Filesystem();
+		global $wp_filesystem;
+
+		if ( $wp_filesystem ) {
+			$wp_filesystem->delete( $log_dir, true );
+		}
 	}
 
 	// Clear any scheduled events.
 	wp_clear_scheduled_hook( 'sndp_scheduled_sync' );
+	wp_clear_scheduled_hook( 'sndp_cleanup_logs' );
 }
 
 // Run cleanup.

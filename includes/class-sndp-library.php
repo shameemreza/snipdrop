@@ -214,6 +214,40 @@ class SNDP_Library {
 	}
 
 	/**
+	 * Get multiple snippets at once, minimising repeated get_option() calls.
+	 *
+	 * Returns an associative array keyed by snippet ID. Entries that could not
+	 * be resolved (missing from local cache, transients, and remote) are omitted.
+	 *
+	 * @since 1.0.0
+	 * @param string[] $snippet_ids Array of snippet IDs.
+	 * @return array<string, array>
+	 */
+	public function get_snippets_batch( $snippet_ids ) {
+		$results        = array();
+		$local_snippets = get_option( 'sndp_local_snippets', array() );
+
+		$remaining = array();
+
+		foreach ( $snippet_ids as $sid ) {
+			if ( isset( $local_snippets[ $sid ] ) ) {
+				$results[ $sid ] = $local_snippets[ $sid ];
+			} else {
+				$remaining[] = $sid;
+			}
+		}
+
+		foreach ( $remaining as $sid ) {
+			$full = $this->get_snippet( $sid );
+			if ( ! is_wp_error( $full ) ) {
+				$results[ $sid ] = $full;
+			}
+		}
+
+		return $results;
+	}
+
+	/**
 	 * Store snippet locally for persistent access.
 	 *
 	 * This ensures snippets work even if GitHub is unreachable.

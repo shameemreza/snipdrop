@@ -122,6 +122,18 @@ final class SnipDrop {
 
 		// Add settings link to plugins page.
 		add_filter( 'plugin_action_links_' . SNDP_PLUGIN_BASENAME, array( $this, 'plugin_action_links' ) );
+
+		// Scheduled log cleanup.
+		add_action( 'sndp_cleanup_logs', array( $this, 'run_log_cleanup' ) );
+	}
+
+	/**
+	 * Cron callback: clean up old error log files.
+	 *
+	 * @since 1.0.0
+	 */
+	public function run_log_cleanup() {
+		SNDP_Error_Handler::instance()->clear_old_logs();
 	}
 
 	/**
@@ -213,6 +225,11 @@ final class SnipDrop {
 			$admin_role->add_cap( SNDP_CAPABILITY );
 		}
 
+		// Schedule weekly log cleanup.
+		if ( ! wp_next_scheduled( 'sndp_cleanup_logs' ) ) {
+			wp_schedule_event( time(), 'weekly', 'sndp_cleanup_logs' );
+		}
+
 		// Set activation transient for welcome notice.
 		set_transient( 'sndp_activated', true, 30 );
 	}
@@ -223,8 +240,8 @@ final class SnipDrop {
 	 * @since 1.0.0
 	 */
 	public function deactivate() {
-		// Clean up scheduled events.
 		wp_clear_scheduled_hook( 'sndp_scheduled_sync' );
+		wp_clear_scheduled_hook( 'sndp_cleanup_logs' );
 
 		// Remove custom capability from administrator role.
 		$admin_role = get_role( 'administrator' );
